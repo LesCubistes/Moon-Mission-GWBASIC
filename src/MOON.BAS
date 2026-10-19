@@ -1,5 +1,6 @@
 10 REM ==== MOON MISSION - title screen and mission menu ====
 20 REM Needs MOONBG.PIC, EARTH.SPR, TITLE.SPR on the current drive
+25 COMMON SK%, LS%
 30 DEFINT A-Z: KEY OFF: CLS
 40 EX = 112: EY = 33: HT = 126: SH = 82
 50 Y = 0: K = 0: S = 1: NM = 2: MI = 1: NMU = 0: A$ = "": DT! = .2: T0! = 0: KP = 0: HR = 0: HE = 0: I = 0

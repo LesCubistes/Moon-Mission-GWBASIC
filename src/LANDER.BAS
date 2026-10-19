@@ -1,6 +1,6 @@
-10 REM ==== MOON LANDING - choose a site, then land the lunar module ====
+10 REM ==== MOON LANDING - phase 1: pick a site from orbit; phase 2: land the lunar module ====
 20 REM Keypad: 8/5 throttle up/down, 0 or SPACE engine off, 7 9 4 6 1 2 3 thrusters
-30 COMMON SK%
+30 COMMON SK%, LS%
 40 DEFINT A-Z: KEY OFF: RANDOMIZE TIMER
 50 REM -- every simple variable is created here, before any VARPTR/BLOAD --
 60 X! = 0: Y! = 0: VX! = 0: VY! = 0: F! = 0: A! = 0: DT! = 0: T0! = 0: T1! = 0: ST! = 0
@@ -9,16 +9,17 @@
 90 XI = 0: YI = 0: OX = -1: OY = 0: FL = 0: OF = 0: PF = 0: OP = 0: TH = 0: K = 0: I = 0
 100 LK = 0: B = 0: P = 0: NP = 0: LV = 1: S = 1: SC = 0: W = 0: AL = 0: LF = 0: RG = 0: MN = 0: Q = 0
 105 CT = 0: D = 0: CX = 0: GC = 0: PX = 0: PY = 0: PO = 0: PZ = 0: R = 0: J = 0: Z = 0
-107 FX = 0: FY = 0: FR = 0: GX = 0: GY = 0: DW = 0: ALM = 0: WD! = 0: T2! = 0: AT! = 0: RL! = 0: LN = 0: SF = 0: TB = 0: LP = 0: HR = 0: HE = 0: LT! = 0: TS! = 0
+107 FX = 0: FY = 0: FR = 0: GX = 0: GY = 0: DW = 0: ALM = 0: WD! = 0: T2! = 0: AT! = 0: RL! = 0: LN = 0: SF = 0: TB = 0: LP = 0: HR = 0: HE = 0: LT! = 0: TS! = 0: BX! = 0: BV! = 0: BI = 0: BO = -1: BY = 0: ZN = 0: OZ = 0: MT! = 0
 110 K$ = "": C$ = "": R$ = "": R2$ = "": M$ = "": N$ = ""
 120 DIM H(639), SP(146), MK(146), BG(146), F1(146), F2(146), F3(146)
 125 DIM Q1(146), Q2(146), Q3(146), Q4(146), Q6(146), Q7(146), Q9(146)
 127 DIM B2(172), FB(450), C1(172), C2(172), C3(172), C4(172), C5(172), C6(172), C7(172)
 128 DIM M1(172), M2(172), M3(172), M4(172), M5(172), M6(172), M7(172), EU(6), EV(6)
-130 DIM LA(4), LB(4), LM(4), RX!(9), RY!(9), SN$(3), SD$(3), SA(3), HN$(10), HS!(10), HL$(10)
+130 DIM LA(4), LB(4), LM(4), RX!(9), RY!(9), SN$(3), SD$(3), SA(3), HN$(10), HS!(10), HL$(10), OS(50), OM(50), OG(50), OB(50), ZX(3), ZY(3), ZW(3), ZH(3)
 140 FOR I = 1 TO 9: READ RX!(I), RY!(I): NEXT I
 150 FOR I = 1 TO 3: READ SN$(I), SD$(I), SA(I): NEXT I
 155 FOR I = 1 TO 6: READ EU(I), EV(I): NEXT I
+157 FOR I = 1 TO 3: READ ZX(I), ZY(I), ZW(I), ZH(I): NEXT I
 160 BLOAD "LMSHIP.SPR", VARPTR(SP(0))
 170 BLOAD "LMMASK.SPR", VARPTR(MK(0))
 180 BLOAD "FL1.SPR", VARPTR(F1(0)): BLOAD "FL2.SPR", VARPTR(F2(0)): BLOAD "FL3.SPR", VARPTR(F3(0))
@@ -30,28 +31,51 @@
 189 BLOAD "CP7.SPR", VARPTR(C7(0)): BLOAD "CM1.SPR", VARPTR(M1(0)): BLOAD "CM2.SPR", VARPTR(M2(0))
 191 BLOAD "CM3.SPR", VARPTR(M3(0)): BLOAD "CM4.SPR", VARPTR(M4(0)): BLOAD "CM5.SPR", VARPTR(M5(0))
 192 BLOAD "CM6.SPR", VARPTR(M6(0)): BLOAD "CM7.SPR", VARPTR(M7(0))
+193 BLOAD "OLM.SPR", VARPTR(OS(0)): BLOAD "OLMK.SPR", VARPTR(OM(0)): BLOAD "OFL.SPR", VARPTR(OG(0))
 195 SCREEN 1, 0: COLOR 0, 1: PLAY "MB"
-200 REM ==== landing site menu ====
+200 REM ==== phase 1: orbit - drift left/right, then burn down to a site (no fuel, no points) ====
 210 OUT &H3D8, &H6: CLS
-220 DEF SEG = &HB800: BLOAD "MOONBG.PIC", 0: DEF SEG
-230 LINE (24, 40)-(295, 140), 0, BF: LINE (24, 40)-(295, 140), 1, B
+220 DEF SEG = &HB800: BLOAD "ORBIT.PIC", 0: DEF SEG
+230 BX! = 150: BV! = 0: BY = 48: BO = -1: OZ = 0: OP = -1: PF = 0: MT! = 0: T0! = TIMER
 240 OUT &H3D8, &HE: OUT &H3D9, 0
-250 LOCATE 7, 11: PRINT "SELECT LANDING SITE";
-260 FOR I = 1 TO 3
-270 LOCATE 7 + 3 * I, 6: PRINT SN$(I);
-280 LOCATE 8 + 3 * I, 6: IF SA(I) THEN PRINT SD$(I); ELSE PRINT "COMING SOON";
-290 NEXT I
-300 GOSUB 380
-310 K$ = INKEY$: IF K$ = "" THEN 310
-320 IF (K$ = CHR$(0) + "H" OR K$ = "8") AND S > 1 THEN S = S - 1: GOSUB 380
-330 IF (K$ = CHR$(0) + "P" OR K$ = "2") AND S < 3 THEN S = S + 1: GOSUB 380
-340 IF K$ = CHR$(27) THEN SK% = 1: CHAIN "MOON"
-350 IF K$ <> CHR$(13) THEN 310
-360 IF SA(S) = 0 THEN SOUND 200, 2: GOTO 310
-370 LV = S: LN = 1: GOTO 1000
-380 FOR I = 1 TO 3
-390 LINE (36, 46 + 24 * I)-(283, 65 + 24 * I), -2 * (I = S), B
-400 NEXT I: RETURN
+250 T1! = TIMER: DT! = T1! - T0!: IF DT! < .05 AND DT! >= 0 THEN 250
+255 IF DT! > .3 OR DT! < 0 THEN DT! = .3
+260 T0! = T1!
+265 K$ = INKEY$: IF K$ = "" THEN 300
+270 IF K$ = CHR$(0) + "K" OR K$ = "4" OR K$ = "7" OR K$ = "1" THEN BV! = BV! - 10: PF = 4: PT! = T1! + .2
+275 IF K$ = CHR$(0) + "M" OR K$ = "6" OR K$ = "9" OR K$ = "3" THEN BV! = BV! + 10: PF = 6: PT! = T1! + .2
+280 IF K$ = CHR$(0) + "P" OR K$ = "2" OR K$ = CHR$(13) THEN 400
+285 IF K$ = CHR$(27) THEN SK% = 1: CHAIN "MOON"
+290 GOTO 265
+300 IF BV! > 60 THEN BV! = 60 ELSE IF BV! < -60 THEN BV! = -60
+305 BV! = BV! * (1 - .6 * DT!): BX! = BX! + BV! * DT!
+310 IF BX! < 0 THEN BX! = 0: BV! = 0 ELSE IF BX! > 300 THEN BX! = 300: BV! = 0
+315 BI = INT(BX!): ZN = (BI + 10) \ 107 + 1: IF ZN > 3 THEN ZN = 3
+320 IF T1! > PT! THEN PF = 0
+325 IF ZN <> OZ THEN GOSUB 380
+330 IF BI <> BO OR PF <> OP THEN GOSUB 360
+335 IF MT! > 0 THEN IF T1! > MT! THEN LINE (0, 16)-(319, 23), 0, BF: MT! = 0
+340 GOTO 250
+360 REM ---- draw the small lander and any side puff ----
+362 IF BO >= 0 THEN PUT (BO, BY), OB, PSET
+364 GET (BI, BY)-(BI + 19, BY + 17), OB
+366 PUT (BI, BY), OM, AND: PUT (BI, BY), OS, OR
+368 IF PF = 4 THEN PSET (BI + 18, BY + 8), 3: PSET (BI + 19, BY + 7), 3: PSET (BI + 19, BY + 9), 1
+370 IF PF = 6 THEN PSET (BI + 1, BY + 8), 3: PSET (BI, BY + 7), 3: PSET (BI, BY + 9), 1
+372 BO = BI: OP = PF: RETURN
+380 REM ---- highlight the zone under the lander ----
+382 IF OZ THEN LINE (ZX(OZ), ZY(OZ))-(ZW(OZ), ZH(OZ)), 0, B
+384 LINE (ZX(ZN), ZY(ZN))-(ZW(ZN), ZH(ZN)), 2, B: OZ = ZN: SOUND 500, 1: RETURN
+400 REM ---- descent burn over the chosen site ----
+405 IF SA(ZN) = 0 THEN M$ = SN$(ZN) + " - COMING SOON": LINE (0, 16)-(319, 23), 0, BF: LOCATE 3, 21 - LEN(M$) \ 2: PRINT M$;: SOUND 150, 4: MT! = T1! + 2.5: GOTO 265
+410 LV = ZN: LS% = ZN: LN = 1: PLAY "T200O3L32CDEFGAB"
+415 FOR J = 1 TO 9
+420 PUT (BI, BY), OB, PSET: BY = BY + 2: GET (BI, BY)-(BI + 19, BY + 17), OB
+425 PUT (BI, BY), OM, AND: PUT (BI, BY), OS, OR: PUT (BI, BY), OG, OR
+430 SOUND 120 - J * 6, 1: WD! = .08: GOSUB 7900: NEXT J
+435 WD! = .4: GOSUB 7900
+440 IF INKEY$ <> "" THEN 440
+445 GOTO 1000
 1000 REM ==== load and start the level ====
 1010 OUT &H3D8, &H6: CLS
 1020 DEF SEG = &HB800: BLOAD "EASY.PIC", 0: DEF SEG
@@ -132,7 +156,7 @@
 4405 LINE (64, 60)-(255, 107), 0, BF: LINE (64, 60)-(255, 107), 2, B
 4410 LOCATE 9, 21 - LEN(R$) \ 2: PRINT R$;
 4415 LOCATE 10, 21 - LEN(R2$) \ 2: PRINT R2$;
-4420 IF LN < 3 THEN LOCATE 12, 14: PRINT USING "LANDERS LEFT #"; 3 - LN;: LOCATE 13, 10: PRINT "ENTER=NEXT  ESC=SITES";
+4420 IF LN < 3 THEN LOCATE 12, 14: PRINT USING "LANDERS LEFT #"; 3 - LN;: LOCATE 13, 10: PRINT "ENTER=NEXT  ESC=ORBIT";
 4425 IF LN = 3 THEN LOCATE 12, 14: PRINT "MISSION FAILED";: LOCATE 13, 15: PRINT "PRESS ENTER";: PLAY "T90O2L4GE-C2"
 4430 IF INKEY$ <> "" THEN 4430
 4440 K$ = INKEY$: IF K$ = "" THEN 4440
@@ -299,12 +323,14 @@
 8550 RETURN
 9000 REM ---- thrusters: push x, push y for keys 1-9 (5 and 8 are throttle) ----
 9010 DATA -.707,.707, 0,1, .707,.707, -1,0, 0,0, 1,0, -.707,-.707, 0,0, .707,-.707
-9050 REM ---- landing sites ----
+9055 REM ---- landing sites: name, description, available? ----
 9060 DATA "TRANQUILITY BASE", "APOLLO 11 - EASY", 1
 9070 DATA "FRA MAURO", "APOLLO 14 - MEDIUM", 0
 9080 DATA "HADLEY RILLE", "APOLLO 15 - HARD", 0
 9090 REM ---- debris directions for the explosion (x step, upward step) ----
 9095 DATA -5,6, -3,8, -1,9, 2,9, 4,7, 5,5
+9096 REM ---- phase 1 zone highlight boxes (x0, y0, x1, y1), matching ORBIT.PIC ----
+9097 DATA 5,93,97,113, 117,85,193,105, 213,93,313,113
 9100 REM ---- Easy pads: left x, right x, multiplier ----
 9110 DATA 3, 12,68,2, 140,184,3, 256,292,5
 9190 REM ---- default high scores: initials, score, site ----

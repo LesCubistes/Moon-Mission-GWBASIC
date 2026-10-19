@@ -41,6 +41,7 @@ x("windowfocus", w)
 x("key", "Num_Lock")                       # NumLock ON so the keypad sends digits
 x("type", "--delay", "90", cmd); x("key", "Return")
 pre, _, post = script.partition("SYNC")
+if "SYNC" not in script: pre, post = "", script      # no sync: keys are timed from the start of capture
 def parse(sc): return sorted((float(t), k) for t, k in (e.split(":") for e in sc.split()))
 from PIL import Image
 def grab(path):
