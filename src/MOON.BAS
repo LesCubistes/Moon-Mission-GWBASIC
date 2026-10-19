@@ -2,8 +2,8 @@
 20 REM Needs MOONBG.PIC, EARTH.SPR, TITLE.SPR on the current drive
 30 DEFINT A-Z: KEY OFF: CLS
 40 EX = 112: EY = 33: HT = 126: SH = 82
-50 Y = 0: K = 0: S = 1: NM = 2: MI = 1: NMU = 0: A$ = "": DT! = .2: T0! = 0
-60 DIM E(986), T(682), M$(2), MU$(12)
+50 Y = 0: K = 0: S = 1: NM = 2: MI = 1: NMU = 0: A$ = "": DT! = .2: T0! = 0: KP = 0: HR = 0: HE = 0: I = 0
+60 DIM E(986), T(682), M$(2), MU$(12), HB(4100), HN$(10), HS!(10), HL$(10)
 70 M$(1) = "MOON LANDING": M$(2) = "EXIT TO DOS"
 80 GOSUB 5000
 100 REM ---- load art with the display switched off ----
@@ -22,12 +22,13 @@
 250 IF K < SH THEN E(1) = K ELSE E(1) = SH
 255 PUT (EX, Y), E, PSET
 260 GOSUB 900
-270 IF INKEY$ <> "" THEN GOTO 400
+270 IF INKEY$ <> "" THEN KP = 1: GOTO 400
 280 IF TIMER < T0! + K * DT! THEN GOTO 260
 290 NEXT K
-400 REM ---- title and menu ----
+400 REM ---- title; once the music ends show high scores; then the menu ----
 410 LINE (EX, EY)-(EX + 95, HT - 1), 0, BF: E(1) = SH: PUT (EX, EY), E, PSET
 420 PUT (24, 8), T, PSET
+425 IF SK% <> 1 AND KP = 0 THEN GOSUB 1000
 430 LINE (72, 146)-(247, 197), 0, BF: LINE (72, 146)-(247, 197), 1, B
 440 LOCATE 20, 12: PRINT "- SELECT MISSION -";
 450 FOR K = 1 TO NM: LOCATE 20 + 2 * K, 15: PRINT M$(K);: NEXT K
@@ -50,6 +51,15 @@
 900 REM ---- feed music a few notes at a time so PLAY never blocks ----
 910 IF MI <= NMU THEN IF PLAY(0) < 4 THEN PLAY MU$(MI): MI = MI + 1
 920 RETURN
+1000 REM ---- attract: wait for the music to finish, show high scores ~6 s ----
+1010 GOSUB 900: IF INKEY$ <> "" THEN RETURN
+1020 IF MI <= NMU OR PLAY(0) > 0 THEN 1010
+1030 T0! = TIMER + 1
+1035 IF INKEY$ <> "" THEN RETURN ELSE IF TIMER < T0! THEN 1035
+1040 GET (32, 44)-(287, 171), HB: GOSUB 8100: HR = 0: GOSUB 8500
+1050 LOCATE 20, 14: PRINT "PRESS ANY KEY";: T0! = TIMER + 6
+1060 IF INKEY$ = "" AND TIMER < T0! THEN 1060
+1070 PUT (32, 44), HB, PSET: RETURN
 5000 REM ---- Also sprach Zarathustra (opening) ----
 5010 FOR K = 1 TO 9: READ MU$(K): NEXT K: NMU = 9: RETURN
 5020 DATA "MBT100O1C1O3L4C2G2", "O4C2.E16E-1"
@@ -57,3 +67,22 @@
 5040 DATA "O3L4C2G2O4C2.E-16E1"
 5050 DATA "O2L8CO1GO2CO1G", "O2CO1GO2CO1GO2C4"
 5060 DATA "O3L4C2G2O4C2.", "A1B4O5C1."
+8100 REM ---- load the high score table (defaults if HISCORE.DAT is missing) ----
+8110 HE = 0: ON ERROR GOTO 8180
+8120 OPEN "HISCORE.DAT" FOR INPUT AS #1
+8130 IF HE = 0 THEN FOR I = 1 TO 10: INPUT #1, HN$(I), HS!(I), HL$(I): NEXT I
+8140 CLOSE #1: ON ERROR GOTO 0
+8150 IF HE THEN RESTORE 9200: FOR I = 1 TO 10: READ HN$(I), HS!(I), HL$(I): NEXT I
+8160 RETURN
+8180 HE = 1: RESUME NEXT
+8500 REM ---- draw the high score table; HR = rank to highlight (0 = none) ----
+8510 LINE (32, 44)-(287, 171), 0, BF: LINE (32, 44)-(287, 171), 1, B
+8520 LOCATE 7, 15: PRINT "HIGH SCORES";: LINE (116, 57)-(203, 57), 1
+8530 FOR I = 1 TO 10: LOCATE 8 + I, 7: PRINT USING "##. \ \  ######  "; I; HN$(I); HS!(I);: PRINT HL$(I);: NEXT I
+8540 IF HR THEN LINE (44, 55 + 8 * HR)-(277, 64 + 8 * HR), 2, B
+8550 RETURN
+9190 REM ---- default high scores: initials, score, site ----
+9200 DATA "ARM", 6000, "TRANQUILITY", "ALD", 5000, "TRANQUILITY", "SHE", 4500, "FRA MAURO"
+9210 DATA "SCO", 4000, "HADLEY RILLE", "MIT", 3500, "FRA MAURO", "IRW", 3000, "HADLEY RILLE"
+9220 DATA "DUK", 2500, "TRANQUILITY", "ROO", 2000, "FRA MAURO", "WOR", 1500, "HADLEY RILLE"
+9230 DATA "COL", 1000, "TRANQUILITY"
