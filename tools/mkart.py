@@ -10,7 +10,7 @@ import sys, struct, random, math
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
-SRC, OUT = sys.argv[1], sys.argv[2]
+SRC, OUT = sys.argv[1], sys.argv[2]   # SRC unused now (kept for the old photo pipeline)
 PAL = np.array([(0, 0, 0), (0, 170, 170), (170, 0, 0), (170, 170, 170)], np.uint8)
 BAYER = np.array([[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]) / 16.0
 yy, xx = np.mgrid[0:200, 0:320]
@@ -18,9 +18,9 @@ TH_ = BAYER[yy % 4, xx % 4]
 random.seed(1969)
 
 # ---------------- layout ----------------
-EW, EH = 100, 68             # Earth sprite size (EW multiple of 4)
+EW, EH = 96, 80              # Earth sprite size (EW multiple of 4)
 EX = 112                     # left edge of Earth
-EY = 36                      # final top of Earth (under the title)
+EY = 33                      # final top of Earth (under the title)
 HT = 126                     # horizon line where Earth emerges
 MARGIN = 2                   # black rows under Earth erase its trail
 SH = EH + MARGIN
@@ -101,36 +101,13 @@ while stars < 50:
     stars += 1
 bg = out.copy()
 
-# ---------------- Earth from the photo ----------------
-im = Image.open(SRC).convert("RGB")
-e = np.asarray(im.crop((446, 538, 654, 709)).resize((EW, EH), Image.LANCZOS)).astype(float)
-r, g, b = e[..., 0], e[..., 1], e[..., 2]
-lum = e.mean(2)
-sat = e.max(2) - e.min(2)
-ey_, ex_ = np.mgrid[0:EH, 0:EW]
-th = BAYER[ey_ % 4, ex_ % 4]
-earth = np.zeros((EH, EW), np.uint8)
-disc = lum > 50
-cloud = disc & (lum > 150) & (sat < 70)
-cn_ = smooth_noise(EW, EH, 9, 11) * 0.6 + smooth_noise(EW, EH, 4, 12) * 0.4
-blob = np.exp(-(((ex_ - EW * 0.36) / (EW * 0.24)) ** 2 + ((ey_ - EH * 0.40) / (EH * 0.30)) ** 2))
-blob2 = np.exp(-(((ex_ - EW * 0.58) / (EW * 0.10)) ** 2 + ((ey_ - EH * 0.24) / (EH * 0.14)) ** 2))
-land = disc & ~cloud & ((blob + 0.8 * blob2) * (0.6 + cn_) > 0.55) & (lum > 70)
-ocean = disc & ~cloud & ~land
-on = np.clip((lum - 35) / 70, 0, 1)
-earth[ocean & (on > th * 0.8)] = 1
-ln = np.clip((lum - 60) / 110, 0, 1)
-earth[land] = 2                                      # red-brown
-earth[land & (th < 0.35) & (ln > 0.35)] = 3            # tan desert speckle
-earth[land & (th > 0.8) & (ln < 0.35)] = 0             # darker relief
-cn = np.clip((lum - 150) / 60, 0, 1)
-earth[cloud & ((cn > th * 0.7) | (th < 0.5))] = 3
-for row_y in range(EH):
-    row = np.nonzero(disc[row_y])[0]
-    if len(row) and lum[row_y, row[0]] > 70:
-        earth[row_y, row[0]] = 3
-earth[~disc] = 0
-stats = {k: int(v.sum()) for k, v in (("cloud", cloud), ("land", land), ("ocean", ocean))}
+# ---------------- Earth: lit globe centered on the Americas ----------------
+sys.path.insert(0, __import__("os").path.dirname(__file__))
+import earth as E
+STYLE = int(sys.argv[3]) if len(sys.argv) > 3 else 2   # 2 = red-black dither (chosen)
+earth, disc = E.render(STYLE)
+assert earth.shape == (EH, EW)
+stats = {"style": STYLE, "land_px": int(((earth == 2) | (earth == 0) & disc).sum())}
 
 full = bg.copy()
 full[EY:EY + EH, EX:EX + EW][disc] = earth[disc]

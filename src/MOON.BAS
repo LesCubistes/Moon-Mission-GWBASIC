@@ -1,9 +1,9 @@
 10 REM ==== MOON MISSION - title screen and mission menu ====
 20 REM Needs MOONBG.PIC, EARTH.SPR, TITLE.SPR on the current drive
 30 DEFINT A-Z: KEY OFF: CLS
-40 EX = 112: EY = 36: HT = 126: SH = 70
-50 Y = 0: K = 0: S = 1: NM = 2: MI = 1: NMU = 0: A$ = "": DT! = .21: T0! = 0
-60 DIM E(877), T(682), M$(2), MU$(12)
+40 EX = 112: EY = 33: HT = 126: SH = 82
+50 Y = 0: K = 0: S = 1: NM = 2: MI = 1: NMU = 0: A$ = "": DT! = .2: T0! = 0
+60 DIM E(986), T(682), M$(2), MU$(12)
 70 M$(1) = "MOON LANDING": M$(2) = "EXIT TO DOS"
 80 GOSUB 5000
 100 REM ---- load art with the display switched off ----
@@ -26,7 +26,7 @@
 280 IF TIMER < T0! + K * DT! THEN GOTO 260
 290 NEXT K
 400 REM ---- title and menu ----
-410 LINE (EX, EY)-(EX + 99, HT - 1), 0, BF: E(1) = SH: PUT (EX, EY), E, PSET
+410 LINE (EX, EY)-(EX + 95, HT - 1), 0, BF: E(1) = SH: PUT (EX, EY), E, PSET
 420 PUT (24, 8), T, PSET
 430 LINE (72, 146)-(247, 197), 0, BF: LINE (72, 146)-(247, 197), 1, B
 440 LOCATE 20, 12: PRINT "- SELECT MISSION -";

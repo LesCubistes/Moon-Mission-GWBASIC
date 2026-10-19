@@ -18,7 +18,8 @@ GWBASIC MOON
 | `src/MOONPAL.BAS` | CGA palette test scene |
 | `assets/MOONBG.PIC` | `BLOAD` image of CGA video RAM: moon and stars |
 | `assets/EARTH.SPR`, `assets/TITLE.SPR` | `GET`/`PUT` sprites loaded with `BLOAD` |
-| `tools/mkart.py` | Converts the Earthrise photo into the CGA assets |
+| `tools/mkart.py` | Builds the CGA assets: generated cratered moon, starfield, title |
+| `tools/earth.py` | Renders the sunlit Earth over the Americas from real coastline data (`pip install global-land-mask`), in six land styles; style 2 (red-black dither) is used |
 | `tools/mkdisk.sh` | Builds a bootable 360K disk image (needs your own DOS disk, not included) |
 | `tools/mml2wav.py` | Renders the `PLAY` music to a WAV preview |
 
@@ -28,5 +29,6 @@ GWBASIC MOON
 - Missions are separate programs launched from the menu with `CHAIN`; `SK%` is passed back via `COMMON` to skip the intro.
 - Time things with `TIMER`, never `FOR` delay loops: the real XT is far slower than emulators.
 - Feed background music with small `PLAY` chunks; a full queue makes `PLAY` block.
+- To draw part of a sprite, change its height word (`E(1)`) before `PUT`: the Earthrise draws only the rows above the horizon, so nothing flickers through the moon.
 
 MS-DOS and GW-BASIC binaries are Microsoft's and are not included.
