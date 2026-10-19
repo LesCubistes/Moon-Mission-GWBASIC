@@ -1,0 +1,9 @@
+# Microsoft DOS / GW-BASIC binaries and disk images built from them stay local
+dos/
+disks/
+*.IMG
+GWBASIC.EXE
+scratch/
+build/
+.DS_Store
+._*

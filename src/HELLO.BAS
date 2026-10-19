@@ -1,0 +1,4 @@
+10 CLS
+20 PRINT "HELLO, WORLD!"
+30 PRINT "Greetings from GW-BASIC."
+40 END
