@@ -13,7 +13,7 @@ for f in 4201.CPI 5202.CPI COUNTRY.SYS DISPLAY.SYS DRIVER.SYS APPEND.EXE ASSIGN.
 mattrib -i "$OUT" +r +h +s ::/IO.SYS ::/MSDOS.SYS
 printf '@ECHO OFF\r\nGWBASIC MOON\r\n' > /tmp/GO.BAT
 printf '@ECHO OFF\r\nECHO.\r\nECHO  MOON MISSION - type GO to start\r\nECHO.\r\n' > /tmp/AUTOEXEC.BAT
-mcopy -o -i "$OUT" "$R/dos/GWBASIC.EXE" "$R"/src/*.BAS "$R"/assets/*.PIC "$R"/assets/*.SPR \
+mcopy -o -i "$OUT" "$R/dos/GWBASIC.EXE" "$R"/src/*.BAS "$R"/assets/*.PIC "$R"/assets/*.SPR "$R"/assets/*.MAP \
       /tmp/GO.BAT /tmp/AUTOEXEC.BAT ::/
 mlabel -i "$OUT" ::MOONMISSN
 mdir -i "$OUT" ::/ | tail -2
