@@ -87,3 +87,28 @@ for k, e in zip((1, 2, 3, 4, 6, 7, 9), fx[3:]): bsave(f"{OUT}/RC{k}.SPR", sprite
 SC.big(px).save(f"{OUT}/preview_easy_bg.png")
 print("sprite ints:", len(sprite(ship)) // 2, " pads:", [(a, b, H[a]) for a, b, _ in PADS])
 print("min MN", min(MN), "max H", max(H))
+
+# ---------- crash poses (40x34 canvas, pose bottom-aligned, centred) ----------
+with contextlib.redirect_stdout(io.StringIO()):
+    import mockcrash as CR
+PW, PH = 40, 34
+def pose(sp):
+    c = np.zeros((PH, PW), np.uint8)
+    h, w = sp.shape
+    assert h <= PH and w <= PW, (h, w)
+    c[PH - h:, (PW - w) // 2:(PW - w) // 2 + w] = sp
+    return c
+POSES = {
+    1: CR.ship_px(True),                      # COL   legs folded
+    2: CR.rot(CR.ship_px(True, True), 11),    # COLT  slumped, leg snapped
+    3: CR.rot(CR.ship_px(), 40),              # TR40  tipping right
+    4: CR.rot(CR.ship_px(), -40),             # TL40  tipping left
+    5: CR.rot(CR.ship_px(), 90),              # TR90  on its side, fell right
+    6: CR.rot(CR.ship_px(), -90),             # TL90  on its side, fell left
+    7: CR.rot(CR.ship_px(True, True), 180),   # FLIP  upside down
+}
+for n, sp in POSES.items():
+    c = pose(sp)
+    bsave(f"{OUT}/CP{n}.SPR", sprite(c))
+    bsave(f"{OUT}/CM{n}.SPR", sprite(np.where(c > 0, 0, 3).astype(np.uint8)))
+print("pose ints:", len(sprite(pose(POSES[1]))) // 2)

@@ -29,10 +29,14 @@ env = dict(os.environ, DISPLAY=":96", SDL_AUDIODRIVER="dummy")
 xv = subprocess.Popen(["Xvfb", ":96", "-screen", "0", "1024x768x24"], stderr=subprocess.DEVNULL)
 time.sleep(2)
 db = subprocess.Popen(["dosbox-x", "-conf", f"{out}/dbx.conf", "-nopromptfolder"], env=env,
-                      stdout=open(f"{out}/dbx.log", "w"), stderr=subprocess.STDOUT)
+                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+import atexit
+atexit.register(lambda: (db.kill(), xv.kill()))
 time.sleep(10)
 x = lambda *a: subprocess.run(["xdotool", *a], env=env, capture_output=True, text=True).stdout
-w = x("search", "--name", "DOSBox").split()[0]
+ids = x("search", "--name", "DOSBox").split()
+if not ids: time.sleep(5); ids = x("search", "--name", "DOSBox").split()
+w = ids[0]
 x("windowfocus", w)
 x("key", "Num_Lock")                       # NumLock ON so the keypad sends digits
 x("type", "--delay", "90", cmd); x("key", "Return")
@@ -45,11 +49,13 @@ t0 = time.time()
 for t, k in parse(pre):
     while time.time() - t0 < t: time.sleep(0.05)
     x("key", k)
-if post:                                   # wait for the game HUD divider (cyan line at row 17)
+if "SYNC" in script:                       # wait for the game HUD divider (cyan line at row 17)
     while time.time() - t0 < 120:
         grab(f"{out}/sync.png")
-        px = Image.open(f"{out}/sync.png").convert("RGB").getpixel((300, 35))
-        if px[1] > 120 and px[0] < 60: break
+        im = Image.open(f"{out}/sync.png").convert("RGB")
+        row = [im.getpixel((x, 35)) for x in range(0, 640, 4)]
+        blue = [im.getpixel((x, 20)) for x in range(0, 640, 4)]
+        if sum(1 for p in row if p[1] > 120 and p[0] < 60 and p[2] > 120) > 150 and not any(p[2] > 120 and p[1] < 60 for p in blue): break
         time.sleep(0.2)
     print("synced at", round(time.time() - t0, 1))
 events = parse(post) if post else []
