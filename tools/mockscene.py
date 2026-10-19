@@ -59,7 +59,7 @@ def build(seed=11):
     # --- foreground terrain (the collision map) ---
     x = np.arange(W)
     g = 162 + 4 * np.sin(x / 47) + 2 * np.sin(x / 17 + 2) + 1.2 * np.sin(x / 6.1)
-    PADS = [(18, 58, "x2"), (148, 178, "x3"), (262, 284, "x5")]
+    PADS = [(12, 68, "x2"), (140, 184, "x3"), (256, 292, "x5")]   # lander feet span 28 px
     CRATERS = [(96, 16, 13), (214, 20, 16), (308, 9, 8)]             # center, radius, depth
     for cx, r, dep in CRATERS:
         for i in range(max(0, cx - int(r * 1.5)), min(W, cx + int(r * 1.5) + 1)):
@@ -125,9 +125,9 @@ for a, b, lab in PADS:
     row = (g[a] + 12) // 8 + 1
     text(px, row, col, lab, 1)
 # lander
-lx, ly = 70, 52
-px[ly:ly + 14, lx:lx + 16][LANDER > 0] = LANDER[LANDER > 0]
-px[ly + 14:ly + 19, lx + 5:lx + 11][FLAME > 0] = FLAME[FLAME > 0]
+import mockship2 as MS
+lx, ly = 70, 46
+MS.ship(px, lx, ly); MS.main_plume(px, lx, ly + MS.AH + MS.BELL_Y + 1)
 
 def big(p, s=3): return Image.fromarray(PAL[p]).resize((W * s, int(H * s * 1.2)), Image.NEAREST)
 big(px).save(f"{OUT}/mock_easy.png")
