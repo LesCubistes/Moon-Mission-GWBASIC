@@ -1,9 +1,9 @@
 10 REM ==== MOON MISSION - title screen and mission menu ====
 20 REM Needs MOONBG.PIC, EARTH.SPR, TITLE.SPR on the current drive
 30 DEFINT A-Z: KEY OFF: CLS
-40 EX = 132: EY = 52: HT = 124: W = 72: SH = 48
-50 Y = 0: K = 0: S = 1: NM = 2: MI = 1: NMU = 0: A$ = "": DT! = .29: T0! = 0
-60 DIM E(434), P(434), T(682), M$(2), MU$(12)
+40 EX = 112: EY = 36: HT = 126: SH = 70
+50 Y = 0: K = 0: S = 1: NM = 2: MI = 1: NMU = 0: A$ = "": DT! = .21: T0! = 0
+60 DIM E(877), T(682), M$(2), MU$(12)
 70 M$(1) = "MOON LANDING": M$(2) = "EXIT TO DOS"
 80 GOSUB 5000
 100 REM ---- load art with the display switched off ----
@@ -12,22 +12,22 @@
 130 DEF SEG = &HB800: BLOAD "MOONBG.PIC", 0: DEF SEG
 140 BLOAD "EARTH.SPR", VARPTR(E(0))
 150 BLOAD "TITLE.SPR", VARPTR(T(0))
-160 GET (EX, HT)-(EX + W - 1, HT + SH - 1), P
 170 OUT &H3D8, &HE: OUT &H3D9, 0
 180 IF SK% = 1 THEN MI = NMU + 1: GOTO 400
-200 REM ---- earthrise ----
+200 REM ---- earthrise: draw only the rows above the horizon ----
 210 GOSUB 900
 220 T0! = TIMER
 230 FOR K = 1 TO HT - EY
 240 Y = HT - K
-250 PUT (EX, Y), E, PSET: PUT (EX, HT), P, PSET
+250 IF K < SH THEN E(1) = K ELSE E(1) = SH
+255 PUT (EX, Y), E, PSET
 260 GOSUB 900
 270 IF INKEY$ <> "" THEN GOTO 400
 280 IF TIMER < T0! + K * DT! THEN GOTO 260
 290 NEXT K
 400 REM ---- title and menu ----
-410 PUT (EX, EY), E, PSET: PUT (EX, HT), P, PSET
-420 PUT (24, 12), T, PSET
+410 LINE (EX, EY)-(EX + 99, HT - 1), 0, BF: E(1) = SH: PUT (EX, EY), E, PSET
+420 PUT (24, 8), T, PSET
 430 LINE (72, 146)-(247, 197), 0, BF: LINE (72, 146)-(247, 197), 1, B
 440 LOCATE 20, 12: PRINT "- SELECT MISSION -";
 450 FOR K = 1 TO NM: LOCATE 20 + 2 * K, 15: PRINT M$(K);: NEXT K
