@@ -1,34 +1,91 @@
 # Moon Mission (GW-BASIC)
 
-A space game written in GW-BASIC for a VTech Laser XT (8088, CGA), run from a Gotek floppy emulator.
+A space game written in GW-BASIC for a VTech Laser XT (8088, CGA), played from a real floppy in A: and a Gotek floppy emulator in B:.
 
 ![Title sequence](earthrise_preview.gif)
 
-## Running
-Copy `src/*.BAS` and `assets/*` to a disk with `GWBASIC.EXE`, then from that drive:
-```
-GWBASIC MOON
-```
+The first mission is **Moon Landing**: pick a landing site from orbit, then fly the lunar module down onto a landing pad. Every screen of the level is shown in [`docs/screens.png`](docs/screens.png).
+
+## The disks
+The game is split into one start disk and one disk per mission, built by `tools/mkdisk.sh`.
+
+| Disk | Drive | What's on it |
+|---|---|---|
+| `START.IMG` (label MOONSTART) | A: (real floppy) | Bootable MS-DOS 3.30, GW-BASIC, `SPEED.COM`, the title, high scores and mission menu (`MOON.BAS`). The high score table is saved here as `HISCORE.DAT`. |
+| `LANDING.IMG` (label LUNARLAND) | B: (Gotek) | The Moon Landing level (`LANDER.BAS`) and all of its art. Also has GW-BASIC and `PLAY.BAT` so the level can be run on its own for testing. |
+
+To make the real START floppy: select the START image on the Gotek and run `DISKCOPY B: A:` (both 360K). Leave the write-protect tab off so high scores can be saved.
+
+## Playing
+1. Boot from the START floppy in A:, with the LUNAR LANDING image selected on the Gotek.
+2. `SPEED F` for Laser XT fast mode (optional, smoother).
+3. `GO`.
+
+The title plays an Earthrise to *Also sprach Zarathustra*, then shows the high scores. Any key goes to the mission menu. If the level disk isn't in B:, the menu asks for it instead of stopping.
+
+**Orbit (choose a site).** The Moon's horizon is split into three zones: Tranquility (Easy), Fra Mauro (Medium), Hadley Rille (Hard). 4/6 or the arrow keys drift left and right (no fuel used, no points). 2, down arrow or Enter fires the descent. Esc returns to the menu.
+
+**Landing (keypad, NumLock on).**
+
+| Key | Action |
+|---|---|
+| 8 / 5 (or grey + / -) | Main engine throttle up / down, 10% a press |
+| 0 or Space | Main engine off |
+| 7 9 4 6 1 2 3 | Maneuvering thrusters (hold for a steady burn) |
+| Esc | Back to orbit |
+
+Land on a flat patch slowly and nearly level. Touching down too fast, drifting, landing on a slope or flying into terrain all crash, in five different ways (hard landing, impact, tipping over, sliding off a rim, and a rare runaway thruster).
+
+## Scoring
+Each level gives 3 landers. A crash with landers left shows a short report and the next lander starts. The level ends with a picture: the lander standing (landed), the wreck (all landers lost, last one crashed) or a crater (last one exploded).
+
+**Score = (soft landing + time bonus) x pad x lander used**
+- Soft landing: up to 500, less for vertical speed and drift at touchdown
+- Time bonus: 2000, minus 50 per second
+- Pad: each site has three pads. Black is the easiest and pays least, dark grey is the middle, solid grey is the narrowest and pays most
+- Lander used: 1st 100%, 2nd 50%, 3rd 25%
+
+| Site | Fuel | Pads (black / dark grey / grey) |
+|---|---|---|
+| Tranquility Base (Easy) | 800 | x2 / x3 / x5 |
+| Fra Mauro (Medium) | 700 | x3 / x5 / x7 |
+| Hadley Rille (Hard) | 650 | x4 / x7 / x10 |
+
+A fast pilot does best on the far, high-paying pad; a slower one often scores more on a closer pad. The top 10 (initials, score, site) are saved on the START disk.
 
 ## Files
 | File | What it is |
 |---|---|
-| `src/MOON.BAS` | Title screen: Earthrise animation, *Also sprach Zarathustra* fanfare, mission menu |
-| `src/LANDER.BAS` | Moon Landing mission (placeholder for now) |
-| `src/MOONPAL.BAS` | CGA palette test scene |
-| `assets/MOONBG.PIC` | `BLOAD` image of CGA video RAM: moon and stars |
-| `assets/EARTH.SPR`, `assets/TITLE.SPR` | `GET`/`PUT` sprites loaded with `BLOAD` |
-| `tools/mkart.py` | Builds the CGA assets: generated cratered moon, starfield, title |
-| `tools/earth.py` | Renders the sunlit Earth over the Americas from real coastline data (`pip install global-land-mask`), in six land styles; style 2 (red-black dither) is used |
-| `tools/mkdisk.sh` | Builds a bootable 360K disk image (needs your own DOS disk, not included) |
+| `src/MOON.BAS` | START disk: title (Earthrise, music, twinkling stars, shooting stars), high scores, mission menu |
+| `src/LANDER.BAS` | Moon Landing: orbit site selection, landing physics, crashes, scoring, high score entry, end pictures |
+| `src/MOONPAL.BAS` | CGA palette test scene (not on the disks) |
+| `assets/*.PIC` | `BLOAD` images of CGA video RAM: title moon, orbit, the three landing sites, landed / wreck / crater pictures |
+| `assets/*.MAP` | Collision maps for each site: ground height per column, and the highest ground under the lander's footprint |
+| `assets/*.SPR` | `GET`/`PUT` sprites: lander and mask, engine flames, thruster puffs, crash poses, dust plumes, Earth, title |
+| `tools/mkdisk.sh` | Builds `START.IMG` and `LANDING.IMG` (needs your own DOS disk, GW-BASIC and SPEED.COM in `dos/`) |
+| `tools/mkart.py`, `tools/earth.py` | Title art: cratered moon, starfield, title, the lit Earth from real coastline data (`pip install global-land-mask`) |
+| `tools/mklevel.py`, `tools/mksites.py` | Tranquility, and Fra Mauro / Hadley Rille terrain, pads and collision maps; lander, flame and crash sprites |
+| `tools/mkorbit.py` | The orbit screen |
+| `tools/mklanded.py` | The landed, wreck and crater pictures (based on an Apollo surface photo, drawn in our lander's style) |
+| `tools/mkdust.py`, `tools/mkstars.py` | Engine dust sprites; picks the stars that twinkle |
+| `tools/flytest.py` | Boots disks in DOSBox-X at XT speed, plays a timed key script and saves screenshots (`IMGB=` mounts a second disk as B:) |
 | `tools/mml2wav.py` | Renders the `PLAY` music to a WAV preview |
+| `docs/design/` | Design mockups made along the way |
+
+## Building
+Needs Python 3 (numpy, Pillow), mtools and PC-BASIC (`pip install pcbasic`, used to tokenize the programs). Put your own `DISK01.IMG` (MS-DOS 3.30 disk 1), `GWBASIC.EXE` and the Laser XT `SPEED.COM` in `dos/`, then run `tools/mkdisk.sh`. The images land in `disks/`.
 
 ## Conventions
-- Graphics: `SCREEN 1`, palette "1/6" = cyan / red / grey (`OUT &H3D8,&HE : OUT &H3D9,0`).
+- Graphics: `SCREEN 1`, palette cyan / red / grey (`OUT &H3D8,&HE : OUT &H3D9,0`).
 - Source files are ASCII with CRLF line endings (enforced by `.gitattributes`).
-- Missions are separate programs launched from the menu with `CHAIN`; `SK%` is passed back via `COMMON` to skip the intro.
+- GW-BASIC lines must stay under 255 characters. A longer line silently cuts off the rest of the program when it's tokenized, so `mkdisk.sh` refuses to build if one appears.
+- The disks carry tokenized programs: they load about 3x faster on an 8088 than plain text.
+- Missions are separate programs started from the menu with `CHAIN` from the drive in `LD$` (B:). `COMMON` passes `SK%` (skip the intro on return), `LS%` (landing site chosen, for the future surface mission) and `LD$`.
+- Create every simple variable before any `BLOAD ... VARPTR`, so arrays don't move under a load.
 - Time things with `TIMER`, never `FOR` delay loops: the real XT is far slower than emulators.
+- Every BASIC statement costs real time at 4.77 MHz (an extra line checked each frame is noticeable). Per-frame work stays minimal; ambient effects run on a one-second tick.
+- Moving things are drawn so they never smear the scene: the lander saves and restores the area under it with `GET`/`PUT`; dust is `PUT ... XOR` (drawing twice restores the ground); the module overhead and the shadow keep a copy of what they cover.
+- Load screens with the display switched off (`OUT &H3D8,&H6`) and turn it back on when drawn.
 - Feed background music with small `PLAY` chunks; a full queue makes `PLAY` block.
-- To draw part of a sprite, change its height word (`E(1)`) before `PUT`: the Earthrise draws only the rows above the horizon, so nothing flickers through the moon.
 
-MS-DOS and GW-BASIC binaries are Microsoft's and are not included.
+MS-DOS, GW-BASIC and SPEED.COM are not included.
