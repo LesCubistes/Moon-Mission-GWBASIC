@@ -218,6 +218,24 @@ px[mask_ell(246, 166, 9, 3)] = 3; px[mask_ell(246, 167, 9, 3) & (yy > 167)] = 0 
 line((102, 156), (90, 148), 3, 1); line((90, 148), (86, 150), 3, 1)
 CRATERED = composite(ground_px, [(shifted(crater), False)])
 
+# ---------- Earth hanging in the sky (all three pictures) ----------
+import earth as E
+E.EW, E.EH, E._G = 24, 20, None
+ep, ed = E.render(2)
+for im in (LANDED, WRECKED, CRATERED):
+    im[44:64, 278:302][ed] = ep[ed]
+
+# ---------- where the program animates things (printed for LANDER.BAS) ----------
+def rot(x, y, ang=-10, cx=214, cy=164):
+    t = math.radians(ang)
+    return (cx + (x - cx) * math.cos(t) + (y - cy) * math.sin(t), cy - (x - cx) * math.sin(t) + (y - cy) * math.cos(t))
+wl = rot(152, 47); wl = (int(round(wl[0])), int(round(wl[1])) + 6 + DY - 2)
+embers = [(x, y + DY) for x, y, c, r in ((100, 150, 2, 3), (206, 148, 2, 2.6), (190, 172, 2, 2.2), (240, 152, 2, 1.8), (170, 176, 2, 1.6), (96, 168, 2, 1.4))]
+print("LIFE landed antenna light:", (181, 62), "colors", LANDED[62, 181], LANDED[62, 182])
+print("LIFE wreck warning light:", wl, "color under", WRECKED[wl[1], wl[0]])
+print("LIFE wreck sparks box: x 198-214 y", 158 + DY - 14, "-", 168 + DY - 14)
+print("LIFE crater embers:", embers, [int(CRATERED[y, x]) for x, y in embers])
+
 # ---------- save: three full screens (end-of-level pictures) ----------
 for name, im in (("LANDED", LANDED), ("WRECK", WRECKED), ("CRATER", CRATERED)):
     bsave(f"{OUT}/{name}.PIC", cga_bytes(im), seg=0xB800)

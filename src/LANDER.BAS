@@ -12,7 +12,9 @@
 105 CT = 0: D = 0: CX = 0: GC = 0: PX = 0: PY = 0: PO = 0: PZ = 0: R = 0: J = 0: Z = 0
 107 FX = 0: FY = 0: FR = 0: GX = 0: GY = 0: DW = 0: ALM = 0: WD! = 0: T2! = 0: AT! = 0: RL! = 0: LN = 0: SF = 0: TB = 0: LP = 0: HR = 0
 108 HE = 0: LT! = 0: TS! = 0: BX! = 0: BV! = 0: BI = 0: BO = -1: BY = 0: ZN = 0: OZ = 0: MT! = 0: IM = 0: DU = 0: DX = 0: DY = 0: DC = 0
+109 LT2 = 0: TL = 0: LF! = 0: F7! = 0: CXM = 0: MV! = 0: CM = 0: SD = 0: SXO = 0: CL = 0: F6 = 0: F3 = 0: A12! = 0: G12! = 0: BB = 0: BL! = 0: TS = 0: TW! = 0: NT = 0: TK = 0: SP = 0: NM = 0: SYO = 0: SL = 0: SH! = 0: MD! = 0
 110 K$ = "": C$ = "": R$ = "": R2$ = "": M$ = "": N$ = "": PC$ = "": MP$ = ""
+111 H1 = 0: H2 = 0: H3 = 0: H4 = 0: SYB = 0
 112 LD$ = LD$ + "": REM "" when run on its own: assets then come from the current drive
 120 DIM H(639), SP(146), MK(146), BG(146), F1(146), F2(146), F3(146)
 125 DIM Q1(146), Q2(146), Q3(146), Q4(146), Q6(146), Q7(146), Q9(146)
@@ -20,10 +22,12 @@
 128 DIM M1(172), M2(172), M3(172), M4(172), M5(172), M6(172), M7(172), EU(6), EV(6)
 130 DIM LA(4), LB(4), LM(4), RX!(9), RY!(9), SN$(3), SD$(3), SA(3), HN$(10), HS!(10), HL$(10), ZX(3), ZY(3), ZW(3), ZH(3)
 131 DIM D1(115), D2(115), D3(115), D4(115), D5(115), D6(115)
+132 DIM CMS(3), CMK(3), CG(3), SG(60), TX(16), TY(16), TC(16), QX(3), QY(3), QC(3), EB(6), EX(6), EY(6)
 140 FOR I = 1 TO 9: READ RX!(I), RY!(I): NEXT I
 150 FOR I = 1 TO 3: READ SN$(I), SD$(I), SA(I): NEXT I
 155 FOR I = 1 TO 6: READ EU(I), EV(I): NEXT I
 157 FOR I = 1 TO 3: READ ZX(I), ZY(I), ZW(I), ZH(I): NEXT I
+159 RESTORE 9615: FOR I = 1 TO 6: READ EX(I), EY(I): NEXT I: CMS(0) = 8: CMS(1) = 2: CMS(2) = &HFD30: CMK(0) = 8: CMK(1) = 2: CMK(2) = &HCF
 160 BLOAD LD$ + "LMSHIP.SPR", VARPTR(SP(0))
 170 BLOAD LD$ + "LMMASK.SPR", VARPTR(MK(0))
 180 BLOAD LD$ + "FL1.SPR", VARPTR(F1(0)): BLOAD LD$ + "FL2.SPR", VARPTR(F2(0)): BLOAD LD$ + "FL3.SPR", VARPTR(F3(0))
@@ -41,8 +45,10 @@
 200 REM ==== phase 1: orbit - drift left/right, then burn down to a site (no fuel, no points) ====
 210 OUT &H3D8, &H6: CLS
 220 DEF SEG = &HB800: BLOAD LD$ + "ORBIT.PIC", 0: DEF SEG
-230 BX! = 146: BV! = 0: BY = 48: OX = -1: OZ = 0: OP = -1: PF = 0: FL = 0: MT! = 0: T0! = TIMER
+230 BX! = 146: BV! = 0: BY = 48: OX = -1: OZ = 0: OP = -1: PF = 0: FL = 0: MT! = 0: ZN = 2: T0! = TIMER
+232 RESTORE 9600: READ NT: FOR I = 1 TO NT: READ TX(I), TY(I), TC(I): NEXT I: TS = 0: TW! = 0: BL! = 0
 240 OUT &H3D8, &HE: OUT &H3D9, 0
+245 IF INKEY$ <> "" THEN 245: REM ignore keys typed while the level was loading
 250 T1! = TIMER: DT! = T1! - T0!: IF DT! < .05 AND DT! >= 0 THEN 250
 255 IF DT! > .3 OR DT! < 0 THEN DT! = .3
 260 T0! = T1!
@@ -60,6 +66,7 @@
 325 IF ZN <> OZ THEN GOSUB 380
 330 IF BI <> OX OR PF <> OP THEN XI = BI: YI = BY: GOSUB 5000
 335 IF MT! > 0 THEN IF T1! > MT! THEN LINE (0, 16)-(319, 23), 0, BF: MT! = 0
+337 GOSUB 2400
 340 GOTO 250
 380 REM ---- highlight the zone under the lander ----
 382 IF OZ THEN LINE (ZX(OZ), ZY(OZ))-(ZW(OZ), ZH(OZ)), 0, B
@@ -82,6 +89,8 @@
 1070 LOCATE 1, 17: PRINT USING "LANDER #/3"; LN;
 1080 LOCATE 4, 21 - LEN(SN$(LV)) \ 2: PRINT SN$(LV);
 1090 T0! = TIMER: ST! = T0!: TT! = T0! + 3: HT! = 0
+1092 TL = -1: LF! = 0: F7! = FM! * .15: CXM = 8 + INT(RND * 40): MV! = 0: CM = 0: SD = 0: CL = 0: F6 = 0: F3 = 0: A12! = 0: G12! = 0: IF RND < .15 THEN A12! = T0! + 4 + RND * 8
+1094 GOSUB 2620
 2000 REM ==== main loop ====
 2010 T1! = TIMER: DT! = T1! - T0!: IF DT! < .05 AND DT! >= 0 THEN 2010
 2020 IF DT! > .3 OR DT! < 0 THEN DT! = .3
@@ -100,10 +109,10 @@
 2180 FL = -(TH > 0) - (TH > 3) - (TH > 7)
 2190 IF T1! > PT! THEN PF = 0
 2195 IF DU THEN GOSUB 2300
-2200 IF XI <> OX OR YI <> OY OR FL <> OF OR PF <> OP THEN GOSUB 5000
-2205 Z = H(XI + 14) - YI - 22: IF TH > 2 AND Z < 30 THEN GOSUB 2320
-2210 IF T1! >= HT! THEN GOSUB 6000: HT! = T1! + .25
-2220 IF TT! > 0 THEN IF T1! > TT! THEN LINE (96, 24)-(231, 31), 0, BF: TT! = 0
+2200 IF XI <> OX OR YI <> OY OR FL <> OF OR PF <> OP THEN IF YI < 46 AND CM THEN GOSUB 2650 ELSE GOSUB 5000
+2205 Z = H(XI + 14) - YI - 22: IF Z < 30 THEN GOSUB 2340
+2210 IF T1! >= HT! THEN GOSUB 6000: HT! = T1! + .4
+2220 IF TT! > 0 THEN IF T1! > TT! THEN LINE (80, 24)-(239, 31), 0, BF: TT! = 0
 2230 GOTO 2010
 2300 REM ---- engine dust: erase last frame's plume (XOR again restores the ground exactly) ----
 2305 ON DU GOSUB 2311, 2312, 2313, 2314, 2315, 2316: DU = 0: RETURN
@@ -117,6 +126,35 @@
 2325 DU = 1 - 2 * (Z < 20) - 2 * (Z < 10) + (DC AND 1): DC = DC + 1
 2330 DX = XI - 22: IF DX < 0 THEN DX = 0 ELSE IF DX > 248 THEN DX = 248
 2335 DY = H(XI + 14) - 12: ON DU GOSUB 2311, 2312, 2313, 2314, 2315, 2316: RETURN
+2340 REM ---- close to the ground (every frame): dust, contact light, tuck the shadow away ----
+2342 IF TH > 2 THEN GOSUB 2320
+2344 IF CL = 0 THEN IF Z < 5 AND VY! > 0 THEN CL = 1: M$ = "CONTACT LIGHT": MD! = 3: GOSUB 2500: SOUND 1500, 1
+2346 IF Z < 16 THEN IF SD THEN GOSUB 2705
+2348 RETURN
+2400 REM ---- orbit life: the command module's light blinks, a star twinkles ----
+2405 IF T1! > BL! THEN BL! = T1! + .5: BB = 1 - BB: PSET (160, 28), 2 * BB: PSET (161, 28), 2 * BB
+2410 IF T1! < TW! THEN RETURN
+2415 TW! = T1! + .2: IF TS THEN PSET (TX(TS), TY(TS)), TC(TS)
+2420 TS = INT(RND * NT) + 1: IF RND < .5 THEN PSET (TX(TS), TY(TS)), 0 ELSE TS = 0
+2425 RETURN
+2500 REM ---- callout M$ on the message line for MD! seconds ----
+2505 LINE (80, 24)-(239, 31), 0, BF: LOCATE 4, 21 - LEN(M$) \ 2: PRINT M$;: TT! = T1! + MD!: RETURN
+2600 REM ---- the command module overhead (4x2 sprite): erase by putting back what was under it / draw ----
+2605 IF CM = 0 THEN RETURN
+2610 PUT (CXM, 36), CG, PSET: CM = 0: RETURN
+2620 GET (CXM, 36)-(CXM + 3, 37), CG: PUT (CXM, 36), CMK, AND: PUT (CXM, 36), CMS, OR: CM = 1: RETURN
+2650 REM ---- lander up near the module: take the module off, redraw the lander, put the module back ----
+2652 GOSUB 2600: GOSUB 5000: GOSUB 2620: RETURN
+2700 REM ---- lander shadow on the surface (sun high on the right, shadow falls left): erase / draw ----
+2705 PUT (SXO, SYO), SG, PSET: SD = 0: RETURN
+2720 SXO = XI + 9 - INT(Z * .7): IF SXO < 0 THEN SXO = 0 ELSE IF SXO > 309 THEN SXO = 309
+2725 H1 = H(SXO): H2 = H(SXO + 3): H3 = H(SXO + 6): H4 = H(SXO + 9): SYO = H1: SYB = H1
+2726 IF H2 < SYO THEN SYO = H2 ELSE IF H2 > SYB THEN SYB = H2
+2727 IF H3 < SYO THEN SYO = H3 ELSE IF H3 > SYB THEN SYB = H3
+2728 IF H4 < SYO THEN SYO = H4 ELSE IF H4 > SYB THEN SYB = H4
+2729 IF SYB - SYO > 30 OR SYB > 197 THEN RETURN
+2730 GET (SXO, SYO)-(SXO + 9, SYB + 1), SG: LINE (SXO, H1)-(SXO + 3, H2), 0: LINE -(SXO + 6, H3), 0: LINE -(SXO + 9, H4), 0
+2732 LINE (SXO, H1 + 1)-(SXO + 3, H2 + 1), 0: LINE -(SXO + 6, H3 + 1), 0: LINE -(SXO + 9, H4 + 1), 0: SD = 1: RETURN
 3000 REM ---- one key ----
 3010 Q = 0: K = 0
 3020 IF LEN(K$) = 2 THEN K = INSTR("OPQKLMGHI", RIGHT$(K$, 1)): GOTO 3060
@@ -132,6 +170,7 @@
 3110 PF = K: PT! = T1! + .2: RETURN
 4000 REM ---- touchdown: which outcome? ----
 4005 IF DU THEN GOSUB 2300
+4006 IF SD THEN GOSUB 2700
 4010 LF = H(XI + 1): RG = H(XI + 26): MN = H(320 + XI)
 4020 P = 0: FOR I = 1 TO NP: IF XI + 1 > LA(I) AND XI + 26 < LB(I) THEN P = I
 4030 NEXT I
@@ -140,7 +179,7 @@
 4060 IF CT = 0 AND (LF <> MN OR RG <> MN) THEN CT = 4
 4070 IF CT = 0 AND VY! > VYS! THEN CT = 1
 4080 IF VY! > 7 AND CT <> 5 THEN CT = 2
-4085 IF TT! > 0 THEN LINE (96, 24)-(231, 31), 0, BF: TT! = 0
+4085 IF TT! > 0 THEN LINE (80, 24)-(239, 31), 0, BF: TT! = 0
 4090 YI = MN - 22: TH = 0: FL = 0: PF = 0: GOSUB 5000: GOSUB 6000
 4100 CX = XI + 14: GC = H(CX): PO = 0
 4110 IF CT THEN ON CT GOSUB 7100, 7200, 7300, 7400, 7500: GOTO 4400
@@ -150,7 +189,7 @@
 4215 TB = 2000 - INT(50 * LT!): IF TB < 0 THEN TB = 0
 4220 LP = 100: IF LN = 2 THEN LP = 50 ELSE IF LN = 3 THEN LP = 25
 4225 TS! = INT(CSNG(SF + TB) * W * LP / 1000 + .5) * 10
-4230 PLAY "T160O4L16CEG>C8": WD! = 1: GOSUB 7900: PC$ = "LANDED.PIC": GOSUB 4600
+4230 PLAY "T160O4L16CEG>C8": WD! = 1: GOSUB 7900: PC$ = "LANDED.PIC": GOSUB 4600: IM = 1: BB = 0: TW! = 0
 4235 LOCATE 1, 11: PRINT "THE EAGLE HAS LANDED";: LOCATE 2, 21 - LEN(SN$(LV)) \ 2: PRINT SN$(LV);
 4240 WD! = .7: GOSUB 7900: WD! = .35
 4245 LOCATE 4, 2: PRINT USING "SOFT LANDING #####"; SF;: GOSUB 4295
@@ -160,30 +199,45 @@
 4265 LOCATE 6, 15: PRINT USING "SCORE ######"; TS!;: PLAY "T200O5L16CEG>C8"
 4270 LOCATE 7, 15: PRINT "PRESS ENTER";
 4275 IF INKEY$ <> "" THEN 4275
-4280 K$ = INKEY$: IF K$ <> CHR$(13) THEN 4280
+4280 GOSUB 4700: K$ = INKEY$: IF K$ <> CHR$(13) THEN 4280
 4285 GOTO 8000
 4295 SOUND 700, 1: GOSUB 7900: RETURN
 4400 REM ==== crashed: with landers left, a quick box and the next lander; the last one ends the level ====
 4402 IF LN = 3 THEN 4470
-4405 LINE (64, 60)-(255, 107), 0, BF: LINE (64, 60)-(255, 107), 2, B
+4405 IM = 0: LINE (64, 60)-(255, 107), 0, BF: LINE (64, 60)-(255, 107), 2, B
 4410 LOCATE 9, 21 - LEN(R$) \ 2: PRINT R$;
 4415 LOCATE 10, 21 - LEN(R2$) \ 2: PRINT R2$;
 4420 LOCATE 12, 14: PRINT USING "LANDERS LEFT #"; 3 - LN;: LOCATE 13, 10: PRINT "ENTER=NEXT  ESC=ORBIT";
 4425 GOTO 4430
 4430 IF INKEY$ <> "" THEN 4430
-4440 K$ = INKEY$: IF K$ = "" THEN 4440
+4440 GOSUB 4700: K$ = INKEY$: IF K$ = "" THEN 4440
 4445 IF K$ = CHR$(27) THEN 200
 4450 IF K$ <> CHR$(13) THEN 4440
 4455 IF LN < 3 THEN LN = LN + 1: GOTO 1000
 4460 GOTO 200
 4470 REM ---- end of level, all three landers lost: the wreck, or the crater if the last one blew up ----
 4472 WD! = .8: GOSUB 7900: PC$ = "WRECK.PIC": IF CT = 2 OR CT = 5 THEN PC$ = "CRATER.PIC"
+4473 IM = 2 - (PC$ = "CRATER.PIC"): SP = 0: BB = 0: TW! = 0: FOR J = 1 TO 6: EB(J) = 1: NEXT J: FOR J = 1 TO 3: QY(J) = 999: NEXT J
 4474 GOSUB 4600: LOCATE 1, 21 - LEN(R$) \ 2: PRINT R$;: LOCATE 2, 21 - LEN(R2$) \ 2: PRINT R2$;
 4476 LOCATE 3, 21 - LEN(SN$(LV)) \ 2: PRINT SN$(LV);: LOCATE 4, 14: PRINT "MISSION FAILED";
 4478 LOCATE 5, 15: PRINT "PRESS ENTER";: PLAY "T90O2L4GE-C2"
 4479 GOTO 4430
 4600 REM ---- end-of-level picture PC$ (LANDED, WRECK or CRATER), loaded with the display off ----
 4610 OUT &H3D8, &H6: DEF SEG = &HB800: BLOAD LD$ + PC$, 0: DEF SEG: OUT &H3D8, &HE: RETURN
+4700 REM ---- life on the end-of-level picture: IM 1 landed, 2 wreck, 3 crater ----
+4702 IF IM = 0 THEN RETURN ELSE IF TIMER < TW! THEN RETURN
+4704 TW! = TIMER + .15: TK = TK + 1: ON IM GOSUB 4710, 4720, 4740: RETURN
+4710 IF TK MOD 4 = 0 THEN BB = 1 - BB: PSET (181, 62), 2 * BB: PSET (182, 62), 2 * BB
+4712 RETURN
+4720 IF TK MOD 3 = 0 THEN BB = 1 - BB: PSET (173, 56), 2 * BB: PSET (174, 56), 2 * BB
+4722 IF SP THEN FOR J = 3 TO 1 STEP -1: PSET (QX(J), QY(J)), QC(J): NEXT J: SP = 0
+4724 IF RND > .45 THEN RETURN
+4726 FOR J = 1 TO 3: QX(J) = 200 + INT(RND * 14): QY(J) = 160 + INT(RND * 10): QC(J) = POINT(QX(J), QY(J)): PSET (QX(J), QY(J)), 2 + (J AND 1): NEXT J: SP = 1: RETURN
+4740 J = INT(RND * 6) + 1: IF EB(J) THEN LINE (EX(J) - 1, EY(J))-(EX(J) + 1, EY(J)), 2 * -(RND < .7)
+4742 IF TK MOD 25 = 0 THEN J = INT(RND * 6) + 1: IF EB(J) THEN EB(J) = 0: LINE (EX(J) - 1, EY(J))-(EX(J) + 1, EY(J)), 0
+4744 FOR J = 1 TO 3: IF QY(J) < 200 THEN PSET (QX(J), QY(J)), QC(J)
+4746 QY(J) = QY(J) + 1: IF QY(J) > 158 THEN QX(J) = 124 + INT(RND * 64): QY(J) = 128 + INT(RND * 10)
+4748 QC(J) = POINT(QX(J), QY(J)): PSET (QX(J), QY(J)), 3: NEXT J: RETURN
 5000 REM ---- draw lander: restore old background, save new, mask, ship, effects ----
 5010 IF OX >= 0 THEN PUT (OX - 4, OY - 3), BG, PSET
 5020 GET (XI - 4, YI - 3)-(XI + 31, YI + 28), BG
@@ -208,8 +262,21 @@
 6030 IF W < 78 THEN LINE (42 + W, 2)-(119, 4), 0, BF
 6040 AL = (H(XI + 14) - YI - 22) * 5: IF AL < 0 THEN AL = 0
 6050 LOCATE 2, 1: PRINT USING "ALT #### H+##.# V+##.# THR ###"; AL; VX!; -VY!; TH * 10;
-6060 I = INT(T1! - ST!): LOCATE 1, 32: PRINT USING "T ##"; I \ 60;: PRINT ":"; RIGHT$(STR$(100 + I MOD 60), 2);
+6060 I = INT(T1! - ST!): IF I <> TL THEN TL = I: LOCATE 1, 32: PRINT USING "T ##"; I \ 60;: PRINT ":"; RIGHT$(STR$(100 + I MOD 60), 2);
+6062 IF T1! > LF! THEN GOSUB 6100
 6070 RETURN
+6100 REM ---- once a second: callouts, the module drifts, the shadow follows ----
+6105 LF! = T1! + 1: IF F! < F7! THEN GOSUB 6150
+6110 IF A12! > 0 THEN IF T1! > A12! THEN A12! = 0: G12! = T1! + 2.8: M$ = "1202 PROGRAM ALARM": MD! = 2.6: GOSUB 2500: SOUND 880, 3: SOUND 660, 3: SOUND 880, 3
+6115 IF G12! > 0 THEN IF T1! > G12! THEN G12! = 0: M$ = "GO ON THAT ALARM": MD! = 2: GOSUB 2500
+6120 LT2 = 1 - LT2: IF LT2 THEN IF CXM < 308 THEN GOSUB 2600: CXM = CXM + 3: GOSUB 2620: RETURN ELSE RETURN
+6125 Z = H(XI + 14) - YI - 22: IF CL THEN IF Z > 12 THEN CL = 0
+6130 IF Z < 16 OR Z >= 90 THEN IF SD THEN GOSUB 2705: RETURN ELSE RETURN
+6135 I = XI + 9 - INT(Z * .7): IF SD THEN IF ABS(I - SXO) < 3 THEN RETURN ELSE GOSUB 2705
+6140 GOSUB 2720: RETURN
+6150 IF F6 = 0 THEN F6 = 1: M$ = "60 SECONDS": MD! = 2.5: GOSUB 2500: SOUND 1000, 2: SOUND 32767, 1: SOUND 1000, 2: RETURN
+6155 IF F3 = 0 AND F! < F7! / 2 THEN F3 = 1: M$ = "30 SECONDS": MD! = 2.5: GOSUB 2500: SOUND 1200, 2: SOUND 32767, 1: SOUND 1200, 2
+6160 RETURN
 7000 REM ---- draw crash pose PZ centred on column CX, resting on ground row GC ----
 7010 IF PO THEN PUT (PX, PY), B2, PSET ELSE IF OX >= 0 THEN PUT (OX - 4, OY - 3), BG, PSET: OX = -1
 7020 PX = CX - 20: IF PX < 0 THEN PX = 0 ELSE IF PX > 280 THEN PX = 280
@@ -368,3 +435,8 @@
 9210 DATA "SCO", 4000, "HADLEY RILLE", "MIT", 3500, "FRA MAURO", "IRW", 3000, "HADLEY RILLE"
 9220 DATA "DUK", 2500, "TRANQUILITY", "ROO", 2000, "FRA MAURO", "WOR", 1500, "HADLEY RILLE"
 9230 DATA "COL", 1000, "TRANQUILITY"
+9596 REM ---- orbit stars that twinkle: count, then x, y, colour (tools/mkstars.py on ORBIT.PIC) ----
+9600 DATA 14,13,35,3,33,33,3,39,123,3,43,118,1,65,29,1,67,28,1,67,33,3,73,39
+9601 DATA 3,92,39,3,97,34,3,298,130,3,307,32,1,312,133,1,313,129,3
+9605 REM ---- crater embers x, y (the module overhead is built in line 159: 4x2 sprite and mask) ----
+9615 DATA 100,164, 206,162, 190,186, 240,166, 170,190, 96,182

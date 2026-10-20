@@ -90,7 +90,7 @@ def draw(g, far, far_density, pads, shadows, stars, seed):
     from mklevel_io import pad_patches
     pad_patches(px, g, [(a, b, int(lab[1:])) for a, b, lab in pads])  # shaded patches, no labels
     from mklevel_io import csm_dots
-    csm_dots(px, 248, 24)                # command module far overhead
+    pass                                     # the module overhead is drawn (moving) by LANDER.BAS
     return px, g
 
 def build(name, g, far, far_density, pads, shadows, stars, seed):
