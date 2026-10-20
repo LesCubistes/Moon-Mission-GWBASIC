@@ -3,10 +3,10 @@
 Composition follows the Apollo surface photo (sun from the right, shadow falling left,
 black sky with the horizon rising to the right, a jettisoned bag by the right leg) but the
 lander uses our sprite's look: grey ascent stage, cyan windows, red descent stage.
-Three versions share one scene, so only the changed area of the crash ones is stored:
-  LANDED.PIC  full screen: the lander standing (also the surface mission briefing picture)
-  WRECK.SPR   PUT patch: lander tipped over on a snapped leg, debris around it
-  CRATER.SPR  PUT patch: fresh crater and scattered wreckage (impact / runaway explosion)
+Three end-of-level pictures share one scene:
+  LANDED.PIC  the lander standing (also the surface mission briefing picture)
+  WRECK.PIC   all landers lost, last one crashed: tipped over on a snapped leg, debris around it
+  CRATER.PIC  all landers lost, last one blew up: fresh crater and scattered wreckage
 The sky is kept black down to row ~64 so the program can print the score lines there.
 usage: mklanded.py OUTDIR
 """
@@ -218,17 +218,8 @@ px[mask_ell(246, 166, 9, 3)] = 3; px[mask_ell(246, 167, 9, 3) & (yy > 167)] = 0 
 line((102, 156), (90, 148), 3, 1); line((90, 148), (86, 150), 3, 1)
 CRATERED = composite(ground_px, [(shifted(crater), False)])
 
-# ---------- save: full landed screen + patches covering every pixel that differs ----------
-from mklevel_io import sprite
-diff = (WRECKED != LANDED) | (CRATERED != LANDED)
-ys, xs = np.where(diff)
-x0, x1 = (xs.min() // 4) * 4, min(W, ((xs.max() + 4) // 4) * 4)
-y0, y1 = ys.min(), ys.max() + 1
-bsave(f"{OUT}/LANDED.PIC", cga_bytes(LANDED), seg=0xB800)
-bsave(f"{OUT}/WRECK.SPR", sprite(WRECKED[y0:y1, x0:x1]))
-bsave(f"{OUT}/CRATER.SPR", sprite(CRATERED[y0:y1, x0:x1]))
-for name, im in (("landed", LANDED), ("wreck", WRECKED), ("crater", CRATERED)):
-    Image.fromarray(PAL[im]).resize((960, 720), Image.NEAREST).save(f"{OUT}/preview_{name}.png")
-n = len(sprite(WRECKED[y0:y1, x0:x1]))
-print(f"patch at ({x0},{y0}) size {x1 - x0}x{y1 - y0} = {n} bytes -> DIM WK({n // 2})")
+# ---------- save: three full screens (end-of-level pictures) ----------
+for name, im in (("LANDED", LANDED), ("WRECK", WRECKED), ("CRATER", CRATERED)):
+    bsave(f"{OUT}/{name}.PIC", cga_bytes(im), seg=0xB800)
+    Image.fromarray(PAL[im]).resize((960, 720), Image.NEAREST).save(f"{OUT}/preview_{name.lower()}.png")
 print("sky rows at x=0/160/319:", horizon[0], horizon[160], horizon[319])

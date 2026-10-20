@@ -3,9 +3,7 @@
 Outputs in OUTDIR:
   ORBIT.PIC  BSAVE of CGA video RAM: stars, Earth, command/service module, the Moon's limb
              split into three equal landing zones with names + difficulty above the surface
-  OLM.SPR    small lander (zoomed-out view) on a 20x18 canvas, ship at +2,+2
-  OLMK.SPR   AND-mask for that canvas
-  OFL.SPR    small descent flame for the same canvas
+The lander itself is the game's own sprite (LMSHIP/LMMASK), drawn by LANDER.BAS.
 Prints the zone label boxes and limb heights the BASIC program uses.
 """
 import sys, os, math, random, struct
@@ -87,7 +85,7 @@ for x0, y0, x1, y1 in boxes: clear[y0 - 2:y1 + 3, x0 - 2:x1 + 3] = True
 clear[24:48, 112:210] = True                             # command/service module
 clear[16:44, 272:304] = True                             # Earth
 for d in DIV: clear[:, d - 2:d + 3] = True
-clear[44:70, 140:180] = True                             # where the lander starts
+clear[44:82, 138:184] = True                             # where the lander starts
 n = 0
 while n < 70:
     sx, sy = random.randrange(W), random.randrange(26, 140)
@@ -148,17 +146,6 @@ SC.text(px, 1, 11, "SELECT LANDING SITE", 1)
 SC.text(px, 2, 3, "4/6 MOVE  2/ENTER DESCEND  ESC MENU", 3)
 bsave(f"{OUT}/ORBIT.PIC", cga_bytes(px), seg=0xB800)
 
-# ---------- small lander for the zoomed-out view ----------
-CW, CH = 20, 18
-lm = np.zeros((CH, CW), np.uint8)
-lm[2:2 + SC.LANDER.shape[0], 2:2 + SC.LANDER.shape[1]] = SC.LANDER
-mk = np.where(lm > 0, 0, 3).astype(np.uint8)
-fl = np.zeros((CH, CW), np.uint8)
-fl[13:18, 7:13] = SC.FLAME
-fl[lm > 0] = 0
-bsave(f"{OUT}/OLM.SPR", sprite(lm)); bsave(f"{OUT}/OLMK.SPR", sprite(mk)); bsave(f"{OUT}/OFL.SPR", sprite(fl))
-
 SC.big(px).save(f"{OUT}/preview_orbit.png")
 print("limb y at x=0,53,107,160,213,266,319:", [int(limb[x]) for x in (0, 53, 107, 160, 213, 266, 319)])
 print("label boxes:", boxes)
-print("sprite ints:", len(sprite(lm)) // 2)

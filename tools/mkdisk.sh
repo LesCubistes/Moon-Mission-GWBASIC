@@ -12,10 +12,18 @@ START=${1:-$R/disks/START.IMG}
 LAND=${2:-$R/disks/LANDING.IMG}
 mkdir -p "$(dirname "$START")" "$(dirname "$LAND")" "$R/build/tok"
 # tokenized programs load ~3x faster on an 8088
-for f in MOON LANDER; do pcbasic --convert=b "$R/src/$f.BAS" "$R/build/tok/$f.BAS" >/dev/null 2>&1; done
+for f in MOON LANDER; do
+  long=$(tr -d '\r' < "$R/src/$f.BAS" | awk 'length($0) > 250 {print "  line " $1 " is " length($0) " chars"}')
+  [ -n "$long" ] && { echo "GW-BASIC lines must stay under 255 characters ($f.BAS):"; echo "$long"; exit 1; }
+  pcbasic --convert=b "$R/src/$f.BAS" "$R/build/tok/$f.BAS" >/dev/null 2>&1
+done
 T=$(mktemp -d)
 printf '@ECHO OFF\r\nGWBASIC MOON\r\n' > "$T/GO.BAT"
-printf '@ECHO OFF\r\nECHO.\r\nECHO  MOON MISSION - put a mission disk in drive B: and type GO\r\nECHO.\r\n' > "$T/AUTOEXEC.BAT"
+printf '@ECHO OFF\r\nECHO.\r\nECHO  MOON MISSION - put a mission disk in drive B: and type GO\r\n' > "$T/AUTOEXEC.BAT"
+# Laser XT speed utility from your own Laser DOS disk (dos/SPEED.COM, not committed): SPEED F = fast mode
+EXTRA=""
+if [ -f "$R/dos/SPEED.COM" ]; then EXTRA="$R/dos/SPEED.COM"; printf 'ECHO  (type SPEED F first for Laser XT fast mode)\r\n' >> "$T/AUTOEXEC.BAT"; fi
+printf 'ECHO.\r\n' >> "$T/AUTOEXEC.BAT"
 printf '@ECHO OFF\r\nGWBASIC LANDER\r\n' > "$T/PLAY.BAT"
 
 # ---------- START disk ----------
@@ -27,7 +35,7 @@ for f in 4201.CPI 5202.CPI COUNTRY.SYS DISPLAY.SYS DRIVER.SYS APPEND.EXE ASSIGN.
          ATTRIB.EXE ANSI.SYS; do mdel -i "$START" ::/$f 2>/dev/null || true; done
 mattrib -i "$START" +r +h +s ::/IO.SYS ::/MSDOS.SYS
 mcopy -o -i "$START" "$R/dos/GWBASIC.EXE" "$R/build/tok/MOON.BAS" "$R/assets/MOONBG.PIC" \
-      "$R/assets/EARTH.SPR" "$R/assets/TITLE.SPR" "$T/GO.BAT" "$T/AUTOEXEC.BAT" ::/
+      "$R/assets/EARTH.SPR" "$R/assets/TITLE.SPR" "$T/GO.BAT" "$T/AUTOEXEC.BAT" $EXTRA ::/
 mlabel -i "$START" ::MOONSTART
 echo "START:   $(mdir -i "$START" ::/ | grep free | xargs)"
 
@@ -35,7 +43,7 @@ echo "START:   $(mdir -i "$START" ::/ | grep free | xargs)"
 rm -f "$LAND"
 dd if=/dev/zero of="$LAND" bs=1024 count=360 2>/dev/null
 mformat -i "$LAND" -f 360 -v LUNARLAND ::
-LEVEL=$(ls "$R"/assets/*.PIC "$R"/assets/*.SPR "$R"/assets/*.MAP | grep -v -E '/(MOONBG\.PIC|EARTH\.SPR|TITLE\.SPR|OFL\.SPR)$')
+LEVEL=$(ls "$R"/assets/*.PIC "$R"/assets/*.SPR "$R"/assets/*.MAP | grep -v -E '/(MOONBG\.PIC|EARTH\.SPR|TITLE\.SPR|OFL\.SPR|OLM\.SPR|OLMK\.SPR|WRECK\.SPR|CRATER\.SPR)$')
 mcopy -o -i "$LAND" "$R/dos/GWBASIC.EXE" "$R/build/tok/LANDER.BAS" $LEVEL "$T/PLAY.BAT" ::/
 echo "LANDING: $(mdir -i "$LAND" ::/ | grep free | xargs)"
 rm -rf "$T"
