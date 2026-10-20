@@ -54,6 +54,8 @@ px[17, :] = 1                          # HUD divider
 px[1, 40:122] = 3; px[5, 40:122] = 3; px[1:6, 40] = 3; px[1:6, 121] = 3   # fuel bar frame
 from mklevel_io import pad_patches
 pad_patches(px, g, [(a, b, int(lab[1:])) for a, b, lab in PADS])      # shaded patches, no labels
+from mklevel_io import csm_dots
+csm_dots(px, 248, 24)                    # command module far overhead
 bsave(f"{OUT}/EASY.PIC", cga_bytes(px), seg=0xB800)
 
 # ---------- collision map ----------

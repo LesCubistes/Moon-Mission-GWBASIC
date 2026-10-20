@@ -15,7 +15,7 @@
 125 DIM Q1(146), Q2(146), Q3(146), Q4(146), Q6(146), Q7(146), Q9(146)
 127 DIM B2(172), FB(450), C1(172), C2(172), C3(172), C4(172), C5(172), C6(172), C7(172)
 128 DIM M1(172), M2(172), M3(172), M4(172), M5(172), M6(172), M7(172), EU(6), EV(6)
-130 DIM LA(4), LB(4), LM(4), RX!(9), RY!(9), SN$(3), SD$(3), SA(3), HN$(10), HS!(10), HL$(10), OS(50), OM(50), OG(50), OB(50), ZX(3), ZY(3), ZW(3), ZH(3)
+130 DIM LA(4), LB(4), LM(4), RX!(9), RY!(9), SN$(3), SD$(3), SA(3), HN$(10), HS!(10), HL$(10), OS(50), OM(50), OB(50), ZX(3), ZY(3), ZW(3), ZH(3)
 140 FOR I = 1 TO 9: READ RX!(I), RY!(I): NEXT I
 150 FOR I = 1 TO 3: READ SN$(I), SD$(I), SA(I): NEXT I
 155 FOR I = 1 TO 6: READ EU(I), EV(I): NEXT I
@@ -31,7 +31,7 @@
 189 BLOAD "CP7.SPR", VARPTR(C7(0)): BLOAD "CM1.SPR", VARPTR(M1(0)): BLOAD "CM2.SPR", VARPTR(M2(0))
 191 BLOAD "CM3.SPR", VARPTR(M3(0)): BLOAD "CM4.SPR", VARPTR(M4(0)): BLOAD "CM5.SPR", VARPTR(M5(0))
 192 BLOAD "CM6.SPR", VARPTR(M6(0)): BLOAD "CM7.SPR", VARPTR(M7(0))
-193 BLOAD "OLM.SPR", VARPTR(OS(0)): BLOAD "OLMK.SPR", VARPTR(OM(0)): BLOAD "OFL.SPR", VARPTR(OG(0))
+193 BLOAD "OLM.SPR", VARPTR(OS(0)): BLOAD "OLMK.SPR", VARPTR(OM(0))
 195 SCREEN 1, 0: COLOR 0, 1: PLAY "MB"
 200 REM ==== phase 1: orbit - drift left/right, then burn down to a site (no fuel, no points) ====
 210 OUT &H3D8, &H6: CLS
@@ -66,12 +66,13 @@
 380 REM ---- highlight the zone under the lander ----
 382 IF OZ THEN LINE (ZX(OZ), ZY(OZ))-(ZW(OZ), ZH(OZ)), 0, B
 384 LINE (ZX(ZN), ZY(ZN))-(ZW(ZN), ZH(ZN)), 2, B: OZ = ZN: SOUND 500, 1: RETURN
-400 REM ---- descent burn over the chosen site ----
+400 REM ---- descent: the up-facing thrusters push the lander down toward the site ----
 405 IF SA(ZN) = 0 THEN M$ = SN$(ZN) + " - COMING SOON": LINE (0, 16)-(319, 23), 0, BF: LOCATE 3, 21 - LEN(M$) \ 2: PRINT M$;: SOUND 150, 4: MT! = T1! + 2.5: GOTO 265
 410 LV = ZN: LS% = ZN: LN = 1: PLAY "T200O3L32CDEFGAB"
 415 FOR J = 1 TO 9
 420 PUT (BI, BY), OB, PSET: BY = BY + 2: GET (BI, BY)-(BI + 19, BY + 17), OB
-425 PUT (BI, BY), OM, AND: PUT (BI, BY), OS, OR: PUT (BI, BY), OG, OR
+425 PUT (BI, BY), OM, AND: PUT (BI, BY), OS, OR: Z = 1 + 2 * (J AND 1)
+427 PSET (BI + 5, BY + 3), Z: PSET (BI + 5, BY + 1), Z: PSET (BI + 14, BY + 3), Z: PSET (BI + 14, BY + 1), Z
 430 SOUND 120 - J * 6, 1: WD! = .08: GOSUB 7900: NEXT J
 435 WD! = .4: GOSUB 7900
 440 IF INKEY$ <> "" THEN 440

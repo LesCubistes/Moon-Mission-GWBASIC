@@ -46,3 +46,9 @@ def pad_patches(px, g, pads):
                 else: v = 3
                 px[y, x] = v
         px[L + 1:min(L + 8, 200), a] = 3; px[L + 1:min(L + 8, 200), b] = 3   # crisp patch edges
+
+def csm_dots(px, x, y):
+    """The command/service module far overhead: a few dots (hull, nose, cyan glint)."""
+    px[y, x + 1] = 3
+    px[y + 1, x:x + 3] = 3
+    px[y + 1, x + 3] = 1
