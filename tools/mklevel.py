@@ -52,10 +52,8 @@ px[0:17] = 0
 px[22:34, 88:236] = 0                  # clear stars behind the site title
 px[17, :] = 1                          # HUD divider
 px[1, 40:122] = 3; px[5, 40:122] = 3; px[1:6, 40] = 3; px[1:6, 121] = 3   # fuel bar frame
-for a, b, lab in PADS:
-    col = (a + b) // 2 // 8 + 1
-    row = (g[a] + 12) // 8 + 1
-    SC.text(px, row, col, lab, 1)
+from mklevel_io import pad_patches
+pad_patches(px, g, [(a, b, int(lab[1:])) for a, b, lab in PADS])      # shaded patches, no labels
 bsave(f"{OUT}/EASY.PIC", cga_bytes(px), seg=0xB800)
 
 # ---------- collision map ----------

@@ -87,10 +87,8 @@ def draw(g, far, far_density, pads, shadows, stars, seed):
     px[22:34, 88:236] = 0
     px[17, :] = 1
     px[1, 40:122] = 3; px[5, 40:122] = 3; px[1:6, 40] = 3; px[1:6, 121] = 3
-    for a, b, lab in pads:
-        col = (a + b) // 2 // 8 + 1 - (len(lab) > 2)
-        row = min((g[a] + 12) // 8 + 1, 25)
-        SC.text(px, row, col, lab, 1)
+    from mklevel_io import pad_patches
+    pad_patches(px, g, [(a, b, int(lab[1:])) for a, b, lab in pads])  # shaded patches, no labels
     return px, g
 
 def build(name, g, far, far_density, pads, shadows, stars, seed):
