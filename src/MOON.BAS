@@ -1,9 +1,9 @@
-10 REM ==== MOON MISSION - title screen and mission menu ====
-20 REM Needs MOONBG.PIC, EARTH.SPR, TITLE.SPR on the current drive
-25 COMMON SK%, LS%
+10 REM ==== MOON MISSION - START disk: title screen, high scores, mission menu ====
+20 REM Needs MOONBG.PIC, EARTH.SPR, TITLE.SPR here; each mission lives on its own disk in drive B:
+25 COMMON SK%, LS%, LD$
 30 DEFINT A-Z: KEY OFF: CLS
 40 EX = 112: EY = 33: HT = 126: SH = 82
-50 Y = 0: K = 0: S = 1: NM = 2: MI = 1: NMU = 0: A$ = "": DT! = .2: T0! = 0: KP = 0: HR = 0: HE = 0: I = 0
+50 Y = 0: K = 0: S = 1: NM = 2: MI = 1: NMU = 0: A$ = "": DT! = .2: T0! = 0: KP = 0: HR = 0: HE = 0: I = 0: LD$ = "B:"
 60 DIM E(986), T(682), M$(2), MU$(12), HB(4100), HN$(10), HS!(10), HL$(10)
 70 M$(1) = "MOON LANDING": M$(2) = "EXIT TO DOS"
 80 GOSUB 5000
@@ -45,8 +45,14 @@
 610 FOR K = 1 TO NM
 620 LINE (108, 150 + 16 * K)-(211, 161 + 16 * K), -2 * (K = S), B
 630 NEXT K: RETURN
-700 REM ---- moon landing ----
-710 CHAIN "LANDER"
+700 REM ---- moon landing: load the level from the LUNAR LANDING disk in drive B: ----
+710 ON ERROR GOTO 750: CHAIN LD$ + "LANDER"
+750 RESUME 755
+755 ON ERROR GOTO 0: GET (16, 60)-(303, 107), HB: LINE (16, 60)-(303, 107), 0, BF: LINE (16, 60)-(303, 107), 2, B
+760 LOCATE 10, 7: PRINT "LUNAR LANDING DISK NOT FOUND";: LOCATE 12, 4: PRINT "PUT IT IN DRIVE B: AND PRESS A KEY";: LOCATE 13, 14: PRINT "(ESC = CANCEL)";
+765 SOUND 200, 3: A$ = INKEY$: IF A$ <> "" THEN 765
+770 GOSUB 900: A$ = INKEY$: IF A$ = "" THEN 770
+775 PUT (16, 60), HB, PSET: IF A$ = CHR$(27) THEN 470 ELSE 700
 800 REM ---- exit ----
 810 SCREEN 0, 0: WIDTH 80: SYSTEM
 900 REM ---- feed music a few notes at a time so PLAY never blocks ----

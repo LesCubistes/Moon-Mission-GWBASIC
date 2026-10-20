@@ -22,6 +22,7 @@ pcspeaker=true
 sbtype=none
 [autoexec]
 imgmount a {img} -t floppy
+{"imgmount b " + os.environ["IMGB"] + " -t floppy" if os.environ.get("IMGB") else ""}
 boot a:
 """
 open(f"{out}/dbx.conf", "w").write(conf)
