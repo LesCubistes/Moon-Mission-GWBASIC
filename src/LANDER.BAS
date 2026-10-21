@@ -4,25 +4,28 @@
 30 COMMON SK%, LS%, LD$
 40 DEFINT A-Z: KEY OFF: RANDOMIZE TIMER
 50 REM -- every simple variable is created here, before any VARPTR/BLOAD --
+55 RP! = 0: T0! = 0: I = 0: OI = 0: Z = 0: DA = 0: XD = 0: DD = 0: CA! = 0: NS = 0: J = 0: K = 0: RO = 0: XF = 0: PN = 0: REM the cockpit replay loop's variables first: GW-BASIC finds early ones fastest
 60 X! = 0: Y! = 0: VX! = 0: VY! = 0: F! = 0: A! = 0: DT! = 0: T0! = 0: T1! = 0: ST! = 0
 70 HT! = 0: PT! = 0: TT! = 0: GR! = 3: AM! = 7: DV! = .8: VYS! = 4: VXS! = 2
 80 FM! = 800: BU! = 25: RF! = 4
 90 XI = 0: YI = 0: OX = -1: OY = 0: FL = 0: OF = 0: PF = 0: OP = 0: TH = 0: K = 0: I = 0
 100 LK = 0: B = 0: P = 0: NP = 0: LV = 1: S = 1: SC = 0: W = 0: AL = 0: LF = 0: RG = 0: MN = 0: Q = 0
-105 CT = 0: D = 0: CX = 0: GC = 0: PX = 0: PY = 0: PO = 0: PZ = 0: R = 0: J = 0: Z = 0
+105 CT = 0: D = 0: CX = 0: GC = 0: PX = 0: PY = 0: PO = 0: PZ = 0: R = 0: J = 0
 107 FX = 0: FY = 0: FR = 0: GX = 0: GY = 0: DW = 0: ALM = 0: WD! = 0: T2! = 0: AT! = 0: RL! = 0: LN = 0: SF = 0: TB = 0: LP = 0: HR = 0
 108 HE = 0: LT! = 0: TS! = 0: BX! = 0: BV! = 0: BI = 0: BO = -1: BY = 0: ZN = 0: OZ = 0: MT! = 0: IM = 0: DU = 0: DX = 0: DY = 0: DC = 0
 109 LT2 = 0: TL = 0: LF! = 0: F7! = 0: CXM = 0: MV! = 0: CM = 0: SD = 0: SXO = 0: CL = 0: F6 = 0: F3 = 0: A12! = 0: G12! = 0: BB = 0: BL! = 0: TS = 0: TW! = 0: NT = 0: TK = 0: SP = 0: NM = 0: SYO = 0: SL = 0: SH! = 0: MD! = 0
 110 K$ = "": C$ = "": R$ = "": R2$ = "": M$ = "": N$ = "": PC$ = "": MP$ = ""
 111 H1 = 0: H2 = 0: H3 = 0: H4 = 0: SYB = 0
-112 LD$ = LD$ + "": REM "" when run on its own: assets then come from the current drive
-120 DIM H(639), SP(146), MK(146), BG(146), F1(146), F2(146), F3(146)
+112 LD$ = LD$ + "": SK% = SK%: LS% = LS%: REM create the COMMON ones too (LD$ is "" when run on its own: assets from the current drive)
+113 CS = 0: RI = 0: NR = 0: AW = 0
+120 DIM PR(9), RA(24), RD(24), RT(24), H(639), SP(146), MK(146), BG(146), F1(146), F2(146), F3(146)
 125 DIM Q1(146), Q2(146), Q3(146), Q4(146), Q6(146), Q7(146), Q9(146)
 127 DIM B2(172), FB(450), C1(172), C2(172), C3(172), C4(172), C5(172), C6(172), C7(172)
 128 DIM M1(172), M2(172), M3(172), M4(172), M5(172), M6(172), M7(172), EU(6), EV(6)
 130 DIM LA(4), LB(4), LM(4), RX!(9), RY!(9), SN$(3), SD$(3), SA(3), HN$(10), HS!(10), HL$(10), ZX(3), ZY(3), ZW(3), ZH(3)
 131 DIM D1(115), D2(115), D3(115), D4(115), D5(115), D6(115)
 132 DIM CMS(3), CMK(3), CG(3), SG(60), TX(16), TY(16), TC(16), QX(3), QY(3), QC(3), EB(6), EX(6), EY(6)
+133 DIM MC(319), RV(24), RH(24)
 140 FOR I = 1 TO 9: READ RX!(I), RY!(I): NEXT I
 150 FOR I = 1 TO 3: READ SN$(I), SD$(I), SA(I): NEXT I
 155 FOR I = 1 TO 6: READ EU(I), EV(I): NEXT I
@@ -42,6 +45,8 @@
 194 BLOAD LD$ + "DU1.SPR", VARPTR(D1(0)): BLOAD LD$ + "DU2.SPR", VARPTR(D2(0)): BLOAD LD$ + "DU3.SPR", VARPTR(D3(0))
 195 SCREEN 1, 0: COLOR 0, 1: PLAY "MB"
 196 BLOAD LD$ + "DU4.SPR", VARPTR(D4(0)): BLOAD LD$ + "DU5.SPR", VARPTR(D5(0)): BLOAD LD$ + "DU6.SPR", VARPTR(D6(0))
+197 BLOAD LD$ + "CKPIT.BIN", VARPTR(MC(0)): CA! = VARPTR(MC(0)): PR(0) = 0: CALL CA!(PR(0)): CS = PR(1): PR(0) = 1
+198 IF CS THEN DEF SEG = CS: BLOAD LD$ + "CKCOM.DAT", 49408!: DEF SEG: REM 64K from DOS for the cockpit view scenery
 200 REM ==== phase 1: orbit - drift left/right, then burn down to a site (no fuel, no points) ====
 210 OUT &H3D8, &H6: CLS
 220 DEF SEG = &HB800: BLOAD LD$ + "ORBIT.PIC", 0: DEF SEG
@@ -56,7 +61,7 @@
 270 IF K$ = CHR$(0) + "K" OR K$ = "4" OR K$ = "7" OR K$ = "1" THEN BV! = BV! - 10: PF = 4: PT! = T1! + .2
 275 IF K$ = CHR$(0) + "M" OR K$ = "6" OR K$ = "9" OR K$ = "3" THEN BV! = BV! + 10: PF = 6: PT! = T1! + .2
 280 IF K$ = CHR$(0) + "P" OR K$ = "2" OR K$ = CHR$(13) THEN 400
-285 IF K$ = CHR$(27) THEN SK% = 1: ON ERROR GOTO 8800: CHAIN "MOON"
+285 IF K$ = CHR$(27) THEN SK% = 1: PR(0) = 3: CALL CA!(PR(0)): ON ERROR GOTO 8800: CHAIN "MOON"
 290 GOTO 265
 300 IF BV! > 60 THEN BV! = 60 ELSE IF BV! < -60 THEN BV! = -60
 305 BV! = BV! * (1 - .6 * DT!): BX! = BX! + BV! * DT!
@@ -90,6 +95,7 @@
 1080 LOCATE 4, 21 - LEN(SN$(LV)) \ 2: PRINT SN$(LV);
 1090 T0! = TIMER: ST! = T0!: TT! = T0! + 3: HT! = 0
 1092 TL = -1: LF! = 0: F7! = FM! * .15: CXM = 8 + INT(RND * 40): MV! = 0: CM = 0: SD = 0: CL = 0: F6 = 0: F3 = 0: A12! = 0: G12! = 0: IF RND < .15 THEN A12! = T0! + 4 + RND * 8
+1093 NR = 0: RI = 0: REM the flight recorder: last 25 samples, 0.4 s apart
 1094 GOSUB 2620
 2000 REM ==== main loop ====
 2010 T1! = TIMER: DT! = T1! - T0!: IF DT! < .05 AND DT! >= 0 THEN 2010
@@ -189,15 +195,15 @@
 4215 TB = 2000 - INT(50 * LT!): IF TB < 0 THEN TB = 0
 4220 LP = 100: IF LN = 2 THEN LP = 50 ELSE IF LN = 3 THEN LP = 25
 4225 TS! = INT(CSNG(SF + TB) * W * LP / 1000 + .5) * 10
-4230 PLAY "T160O4L16CEG>C8": WD! = 1: GOSUB 7900: PC$ = "LANDED.PIC": GOSUB 4600: IM = 1: BB = 0: TW! = 0
-4235 LOCATE 1, 11: PRINT "THE EAGLE HAS LANDED";: LOCATE 2, 21 - LEN(SN$(LV)) \ 2: PRINT SN$(LV);
-4240 WD! = .7: GOSUB 7900: WD! = .35
-4245 LOCATE 4, 2: PRINT USING "SOFT LANDING #####"; SF;: GOSUB 4295
-4250 LOCATE 4, 22: PRINT USING "TIME BONUS #####"; TB;: GOSUB 4295
-4255 LOCATE 5, 3: PRINT USING "LANDING PAD X##"; W;: GOSUB 4295
-4260 LOCATE 5, 22: PRINT USING "LANDER # OF 3 ###_%"; LN; LP;: GOSUB 4295
-4265 LOCATE 6, 15: PRINT USING "SCORE ######"; TS!;: PLAY "T200O5L16CEG>C8"
-4270 LOCATE 7, 15: PRINT "PRESS ENTER";
+4230 PLAY "T160O4L16CEG>C8": WD! = 1: GOSUB 7900: GOSUB 4800: IM = 0
+4235 C$ = "TRANQUILITY BASE HERE.": R$ = "THE EAGLE HAS LANDED.": IF LV > 1 THEN R$ = "TOUCHDOWN CONFIRMED."
+4237 IF LV = 2 THEN C$ = "FRA MAURO BASE HERE." ELSE IF LV = 3 THEN C$ = "HADLEY BASE HERE."
+4240 LINE (62, 128)-(257, 189), 0, BF: LOCATE 17, 9 + (24 - LEN(C$)) \ 2: PRINT C$;: LOCATE 18, 9 + (24 - LEN(R$)) \ 2: PRINT R$;: WD! = .7: GOSUB 7900: WD! = .35
+4245 LOCATE 19, 10: PRINT USING "SOFT LANDING    #####"; SF;: GOSUB 4295
+4250 LOCATE 20, 10: PRINT USING "TIME BONUS      #####"; TB;: GOSUB 4295
+4255 LOCATE 21, 10: PRINT USING "PAD X##   LANDER #/3"; W; LN;: GOSUB 4295
+4260 LOCATE 22, 10: PRINT USING "SCORE          ######"; TS!;: PLAY "T200O5L16CEG>C8"
+4270 LOCATE 23, 15: PRINT "PRESS ENTER";
 4275 IF INKEY$ <> "" THEN 4275
 4280 GOSUB 4700: K$ = INKEY$: IF K$ <> CHR$(13) THEN 4280
 4285 GOTO 8000
@@ -238,6 +244,31 @@
 4744 FOR J = 1 TO 3: IF QY(J) < 200 THEN PSET (QX(J), QY(J)), QC(J)
 4746 QY(J) = QY(J) + 1: IF QY(J) > 158 THEN QX(J) = 124 + INT(RND * 64): QY(J) = 128 + INT(RND * 10)
 4748 QC(J) = POINT(QX(J), QY(J)): PSET (QX(J), QY(J)), 3: NEXT J: RETURN
+4800 REM ==== success: the last seconds of the descent replayed out of the commander's window ====
+4802 REM CKPIT.BIN draws the window: PR(2) altitude, PR(3) drift, PR(4) dust 0-3, PR(5) jolt
+4805 OUT &H3D8, &H6: DEF SEG = &HB800: BLOAD LD$ + "COCKPIT.PIC", 0: DEF SEG: IF CS = 0 THEN OUT &H3D8, &HE: RETURN
+4807 DEF SEG = CS: BLOAD LD$ + "CK" + CHR$(48 + LV) + ".DAT", 0: DEF SEG
+4810 PR(1) = CS: PR(0) = 2: CALL CA!(PR(0)): PR(0) = 1: NS = NR: IF NS > 25 THEN NS = 25
+4812 RO = (RI - NS + 26) MOD 25: XF = RD(RI): PN = 0: CL = 0: PR(5) = 0: I = 0: GOSUB 4840: PR(2) = Z: PR(3) = XD: CALL CA!(PR(0))
+4814 LOCATE 17, 10: PRINT "DESCENT";: GOSUB 4870: GOSUB 4880: GOSUB 4885: OUT &H3D8, &HE
+4816 IF INKEY$ <> "" THEN 4816 ELSE T0! = TIMER
+4820 RP! = (TIMER - T0!) * 2.5: I = INT(RP!): IF I >= NS - 1 THEN 4860 ELSE IF I <> OI THEN GOSUB 4840
+4825 RP! = RP! - I: PR(2) = Z + DA * RP!: PR(3) = XD + DD * RP!: CALL CA!(PR(0)): IF INKEY$ = "" THEN 4820 ELSE 4860
+4838 REM ---- each new sample (0.4 s): where we are heading, dust, and one panel field (ALT every other time) ----
+4840 OI = I: J = (RO + I) MOD 25: K = (J + 1) MOD 25: Z = RA(J): DA = RA(K) - Z: XD = RD(J) - XF: DD = RD(K) - RD(J)
+4842 PR(4) = 0: IF RT(K) > 2 AND Z < 30 THEN PR(4) = 1 - (Z < 20) - (Z < 10)
+4844 PN = PN + 1: ON PN MOD 6 + 1 GOSUB 4870, 4875, 4870, 4880, 4870, 4885: RETURN
+4860 PR(2) = 0: PR(3) = 0: PR(4) = 3: PR(5) = 2: CALL CA!(PR(0)): SOUND 60, 2: LOCATE 17, 10: PRINT "TOUCHDOWN";: Z = 0: K = RI: GOSUB 4870: GOSUB 4875: GOSUB 4880
+4862 PR(5) = 0: LOCATE 22, 10: PRINT "LIGHTS  CONTACT";: FOR I = 2 TO 0 STEP -1: PR(4) = I: WD! = .25: GOSUB 7900: CALL CA!(PR(0)): NEXT I
+4864 LOCATE 22, 10: PRINT "ENGINE STOP    ";: GOSUB 4885: SOUND 200, 1: WD! = 1.2: GOSUB 7900: RETURN
+4868 REM ---- the glass panel fields ----
+4870 LOCATE 19, 10: PRINT USING "ALT  #### M"; Z * 5;: RETURN
+4875 LOCATE 20, 10: PRINT USING "V/S  +##.# M/S"; -RV(K) / 10;: RETURN
+4880 LOCATE 21, 10: PRINT USING "H/S  +##.# M/S"; RH(K) / 10;: RETURN
+4885 AW = Z * 4 \ 3: IF AW > 53 THEN AW = 53
+4886 LINE (22, 132)-(43, 185 - AW), 0, BF: IF AW > 0 THEN LINE (22, 186 - AW)-(43, 185), 1, BF
+4887 IF CL = 0 AND Z < 5 THEN CL = 1: LOCATE 22, 10: PRINT "LIGHTS  CONTACT";: SOUND 1500, 1
+4888 RETURN
 5000 REM ---- draw lander: restore old background, save new, mask, ship, effects ----
 5010 IF OX >= 0 THEN PUT (OX - 4, OY - 3), BG, PSET
 5020 GET (XI - 4, YI - 3)-(XI + 31, YI + 28), BG
@@ -261,6 +292,7 @@
 6020 IF W > 0 THEN LINE (42, 2)-(41 + W, 4), 1, BF
 6030 IF W < 78 THEN LINE (42 + W, 2)-(119, 4), 0, BF
 6040 AL = (H(XI + 14) - YI - 22) * 5: IF AL < 0 THEN AL = 0
+6045 RI = (RI + 1) MOD 25: RA(RI) = AL \ 5: RD(RI) = INT(X! * 4): RV(RI) = INT(VY! * 10): RH(RI) = INT(VX! * 10): RT(RI) = TH: NR = NR + 1
 6050 LOCATE 2, 1: PRINT USING "ALT #### H+##.# V+##.# THR ###"; AL; VX!; -VY!; TH * 10;
 6060 I = INT(T1! - ST!): IF I <> TL THEN TL = I: LOCATE 1, 32: PRINT USING "T ##"; I \ 60;: PRINT ":"; RIGHT$(STR$(100 + I MOD 60), 2);
 6062 IF T1! > LF! THEN GOSUB 6100
