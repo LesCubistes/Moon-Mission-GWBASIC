@@ -12,18 +12,20 @@ The game is split into one start disk and one disk per mission, built by `tools/
 | Disk | Drive | What's on it |
 |---|---|---|
 | `START.IMG` (label MOONSTART) | A: (real floppy) | Bootable MS-DOS 3.30, GW-BASIC, `SPEED.COM`, the title, high scores and mission menu (`MOON.BAS`). The high score table is saved here as `HISCORE.DAT`. |
-| `LANDING.IMG` (label LUNARLAND) | B: (Gotek) | The Moon Landing level (`LANDER.BAS`) and all of its art. Also has GW-BASIC and `PLAY.BAT` so the level can be run on its own for testing. |
+| `LANDING.IMG` (label LUNARLAND) | B: | The Moon Landing level (`LANDER.BAS`) and all of its art. No GW-BASIC: the START disk runs it, so the space goes to the level. Future levels get their own disk, or share one, depending on size. |
 
-To make the real START floppy: select the START image on the Gotek and run `DISKCOPY B: A:` (both 360K). Leave the write-protect tab off so high scores can be saved.
+Both disks work as real 360K floppies in two drives, or with a Gotek as B:. To make a floppy from an image on the Gotek: `DISKCOPY B: A:`. Leave the START floppy's write-protect tab off so high scores can be saved.
 
 ## Playing
-1. Boot from the START floppy in A:, with the LUNAR LANDING image selected on the Gotek.
+1. Boot from the START floppy in A:, with the LUNAR LANDING disk in B:.
 2. `SPEED F` for Laser XT fast mode (optional, smoother).
 3. `GO`.
 
 The title plays an Earthrise to *Also sprach Zarathustra*, then shows the high scores. Any key goes to the mission menu. If the level disk isn't in B:, the menu asks for it instead of stopping.
 
 **Orbit (choose a site).** The Moon's horizon is split into three zones: Tranquility (Easy), Fra Mauro (Medium), Hadley Rille (Hard). 4/6 or the arrow keys drift left and right (no fuel used, no points). 2, down arrow or Enter fires the descent. Esc returns to the menu.
+
+**Braking burn.** A short hands-off cutscene: zoomed far out, the small lander flies over the Moon engine-first to slow down (POWERED DESCENT), swings upright (PITCHOVER) and heads for the site marked on the limb (APPROACH PHASE). No fuel used. Any key skips it.
 
 **Landing (keypad, NumLock on).**
 
@@ -33,6 +35,8 @@ The title plays an Earthrise to *Also sprach Zarathustra*, then shows the high s
 | 0 or Space | Main engine off |
 | 7 9 4 6 1 2 3 | Maneuvering thrusters (hold for a steady burn) |
 | Esc | Back to orbit |
+
+No walls at the top or sides. Climb off the top and the lander hides while a marker on the top edge shows where it is (the HUD keeps the altitude); gravity brings it back, and fuel limits how far you can go. Fly off the left or right edge and the screen flips to danger ground on that side: boulders, crevasses and steep slopes with nowhere safe to land, ending in a natural wall (a crater rim, a ridge, Mount Hadley's flank). Fly back to return to the site.
 
 Land on a flat patch slowly and nearly level. Touching down too fast, drifting, landing on a slope or flying into terrain all crash, in five different ways (hard landing, impact, tipping over, sliding off a rim, and a rare runaway thruster).
 
@@ -68,10 +72,12 @@ A fast pilot does best on the far, high-paying pad; a slower one often scores mo
 | `tools/mkart.py`, `tools/earth.py` | Title art: cratered moon, starfield, title, the lit Earth from real coastline data (`pip install global-land-mask`) |
 | `tools/mklevel.py`, `tools/mksites.py` | Tranquility, and Fra Mauro / Hadley Rille terrain, pads and collision maps; lander, flame and crash sprites |
 | `tools/mkorbit.py` | The orbit screen |
+| `tools/mkbrake.py` | The braking burn cutscene: `BRAKE.RLE` (scene) and `BRAKE.SPR` (small lander in four poses, each with mask and flame) |
+| `tools/mkdanger.py` | The danger screens left and right of each site: `EASYL.RLE`, `EASYR.RLE`, ... and their `.MAP` collision maps |
 | `tools/mklanded.py` | The landed, wreck and crater pictures (based on an Apollo surface photo, drawn in our lander's style). LANDED.PIC is kept for the surface mission |
 | `tools/mkckpit.py` | The cockpit ending: `COCKPIT.PIC`, each site's scenery (`CK1.DAT`..`CK3.DAT`: a ground strip and a rim strip that wrap around, plus horizon tables), the shared `CKCOM.DAT` (window shape, slide speeds, dust) and `CKPIT.BIN`. Also writes preview GIFs drawn by a Python copy of the machine code |
 | `tools/mkcockpit.py` | The cockpit picture and site scenery shared with `mkckpit.py`; run on its own it makes the design mockups |
-| `asm/ckpit.asm` | `CKPIT.BIN`, the 568-byte 8086 routine LANDER `CALL`s to draw the window view each frame (BASIC alone can't move that much picture fast enough on an 8088) |
+| `asm/ckpit.asm` | `CKPIT.BIN`, the small 8086 routine LANDER `CALL`s for jobs BASIC is too slow or can't do: drawing the cockpit window view each frame, unpacking RLE screens, flipping to a stored screen and its map, and copying sprites between arrays |
 | `tools/mkdust.py`, `tools/mkstars.py` | Engine dust sprites; picks the stars that twinkle |
 | `tools/flytest.py` | Boots disks in DOSBox-X at XT speed, plays a timed key script and saves screenshots (`IMGB=` mounts a second disk as B:) |
 | `tools/mml2wav.py` | Renders the `PLAY` music to a WAV preview |
@@ -88,7 +94,10 @@ Needs Python 3 (numpy, Pillow), mtools, PC-BASIC (`pip install pcbasic`, used to
 - Missions are separate programs started from the menu with `CHAIN` from the drive in `LD$` (B:). `COMMON` passes `SK%` (skip the intro on return), `LS%` (landing site chosen, for the future surface mission) and `LD$`. LANDER creates all three at its start too, so they exist even when it is run on its own.
 - Create every simple variable before any `BLOAD ... VARPTR`, so arrays don't move under a load. This matters even more for `CKPIT.BIN`: it lives in an array, and if a new variable appears later the array moves and `CALL` jumps into the wrong place.
 - GW-BASIC looks variables up in the order they were created, so the ones a tight loop uses are created first (line 55 for the cockpit replay).
-- The cockpit scenery lives in 64K asked from DOS (`CKPIT.BIN` mode 0) and handed back before `CHAIN` (mode 3). If DOS has no 64K to spare, the score still shows on the cockpit panel, just without the replay.
+- Two 64K blocks are asked from DOS (`CKPIT.BIN` mode 0) and handed back before `CHAIN` (mode 3): one for the cockpit scenery, one holding the site and its two danger screens with their maps (slots at 0000h, 4000h, 8000h; maps at C000h + slot x 500h; packed files land at D000h). The site's screens load once; a lander after a crash starts from memory, and the side flips are instant.
+- Danger screens and the cutscene are RLE-packed (`FEh n v` = n copies of v). Dithered ground packs to about 3K a screen.
+- GW-BASIC's `PUT` and `GET` take only a whole array, never `A(n)`, so sprites stored together in one array are copied out with `CKPIT.BIN` mode 8 before drawing.
+- Every line that can be fallen into needs a `GOTO` before the next block (line 1096): new subroutines dropped in after a block run by accident otherwise. If DOS has no 64K to spare, the score still shows on the cockpit panel, just without the replay.
 - The flight recorder keeps 25 samples (every HUD update, 0.4 s) of altitude, position, speeds and throttle for the replay.
 - Time things with `TIMER`, never `FOR` delay loops: the real XT is far slower than emulators.
 - Every BASIC statement costs real time at 4.77 MHz (an extra line checked each frame is noticeable). Per-frame work stays minimal; ambient effects run on a one-second tick.

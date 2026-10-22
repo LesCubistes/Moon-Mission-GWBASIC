@@ -4,6 +4,10 @@
 ;   PR(0) = 3 : gives that segment back (before CHAIN, so playing again doesn't use up memory)
 ;   PR(0) = 2 : a site's scenery was just BLOADed at offset 0 of that segment: put it in place and
 ;               make the three copies shifted by 1, 2, 3 pixels (so drawing is plain byte copies)
+;   PR(0) = 4 : show stored screen PR(2) (0..2) from segment PR(1), and its map into H() at PR(3) if <> 0
+;   PR(0) = 6 : unpack an RLE screen at offset PR(3) of segment PR(1) into slot PR(2) (-1 = the screen)
+;   PR(0) = 8 : copy PR(4) words inside BASIC's segment from PR(2) to PR(3) (GW-BASIC's PUT can't
+;               take an array element, so sprites are copied into the arrays PUT uses)
 ;   PR(0) = 1 : draw one frame.  PR(1) segment, PR(2) altitude (0..127), PR(3) drift in pixels
 ;               (signed), PR(4) dust 0..3, PR(5) jolt (rows)
 ; The scenery segment (made by tools/mkckpit.py, CKn.DAT at 0 and CKCOM.DAT at C100h):
@@ -69,9 +73,25 @@ work:   push es
         push si
         push di
         cld
-        cmp word [bx], 2
-        jne draw
+        mov ax, [bx]
+        cmp ax, 2
+        jne w4
         jmp setup
+w4:     cmp ax, 4
+        jne w6
+        jmp show
+w6:     cmp ax, 6
+        jne w8
+        jmp unrle
+w8:     cmp ax, 8
+        jne draw
+        mov si, [bx+4]                  ; mode 8: copy PR(4) words from DS:PR(2) to DS:PR(3)
+        mov di, [bx+6]
+        mov cx, [bx+8]
+        push ds
+        pop es
+        rep movsw
+        jmp finish
 
 ; ------------------------------------------------------------------ draw one frame
 draw:   mov ax, [bx+4]
@@ -286,6 +306,71 @@ shbyte: mov ah, [si+bx]
         cmp cl, 8
         jb shnext
         ret
+
+; ------------------------------------------------------------------ mode 4: show a stored screen
+; PR(1) segment of the screen store, PR(2) slot k (0 left, 1 centre, 2 right) at k*4000h,
+; PR(3) <> 0: also copy that slot's map (640 integers at C000h + k*500h) to BASIC's H() at DS:PR(3)
+show:   mov dx, [bx+4]                  ; k
+        mov di, [bx+6]                  ; H() address (0 = no map)
+        mov ax, [bx+2]
+        push ds
+        pop es                          ; es = BASIC data (for the map copy)
+        mov ds, ax
+        or di, di
+        jz nomap
+        mov ax, 500h
+        mul dx
+        add ax, 0C000h
+        mov si, ax
+        mov cx, 640
+        rep movsw
+nomap:  mov bx, [bp+6]                  ; PR() is in BASIC's segment: read k again through es
+        mov ax, [es:bx+4]
+        mov cl, 14
+        shl ax, cl                      ; k * 4000h
+        mov si, ax
+        mov ax, 0B800h
+        mov es, ax
+        xor di, di
+        mov cx, 2000h
+        rep movsw
+        jmp finish
+
+; ------------------------------------------------------------------ mode 6: unpack an RLE screen
+; PR(1) segment, PR(2) slot k (or -1 for the screen at B800:0), PR(3) offset of the packed data.
+; Packed: FEh n v = n copies of v (n = 0 means 256); any other byte is itself. 16384 bytes out.
+unrle:  mov si, [bx+6]
+        mov ax, [bx+4]
+        mov dx, [bx+2]
+        mov ds, dx
+        cmp ax, -1
+        jne toslot
+        mov dx, 0B800h
+        xor di, di
+        jmp rl0
+toslot: mov cl, 14
+        shl ax, cl
+        mov di, ax
+rl0:    mov es, dx
+        mov dx, di
+        add dx, 4000h                   ; end of output
+rlnext: cmp di, dx
+        jae rldone
+        lodsb
+        cmp al, 0FEh
+        jne rllit
+        lodsb
+        xor ch, ch
+        mov cl, al
+        or cx, cx
+        jnz rlrun
+        mov cx, 256
+rlrun:  lodsb
+        rep stosb
+        jmp rlnext
+rllit:  stosb
+        jmp rlnext
+rldone: jmp finish
 
 finish: pop di
         pop si

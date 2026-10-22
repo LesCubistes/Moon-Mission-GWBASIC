@@ -169,7 +169,7 @@ cock = M.COCK.copy()
 cock[M.window] = 0
 bsave(f"{OUT}/COCKPIT.PIC", cga_bytes(cock), seg=0xB800)
 code = open(BIN, "rb").read()
-assert len(code) <= 640, "CKPIT.BIN must fit in MC(319) in LANDER.BAS"
+assert len(code) <= 800, "CKPIT.BIN must fit in MC(399) in LANDER.BAS"
 bsave(f"{OUT}/CKPIT.BIN", code + b"\0" * (len(code) & 1))
 
 # ---------------- Python copy of the machine code (for previews) ----------------

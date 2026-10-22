@@ -17,7 +17,7 @@
 110 K$ = "": C$ = "": R$ = "": R2$ = "": M$ = "": N$ = "": PC$ = "": MP$ = ""
 111 H1 = 0: H2 = 0: H3 = 0: H4 = 0: SYB = 0
 112 LD$ = LD$ + "": SK% = SK%: LS% = LS%: REM create the COMMON ones too (LD$ is "" when run on its own: assets from the current drive)
-113 CS = 0: RI = 0: NR = 0: AW = 0
+113 CS = 0: RI = 0: NR = 0: AW = 0: SN = 1: SB = 0: HP = 0: LL = 0: MX = -1: QB = 0: QS = 0: QM = 0: QF = 0
 120 DIM PR(9), RA(24), RD(24), RT(24), H(639), SP(146), MK(146), BG(146), F1(146), F2(146), F3(146)
 125 DIM Q1(146), Q2(146), Q3(146), Q4(146), Q6(146), Q7(146), Q9(146)
 127 DIM B2(172), FB(450), C1(172), C2(172), C3(172), C4(172), C5(172), C6(172), C7(172)
@@ -25,7 +25,7 @@
 130 DIM LA(4), LB(4), LM(4), RX!(9), RY!(9), SN$(3), SD$(3), SA(3), HN$(10), HS!(10), HL$(10), ZX(3), ZY(3), ZW(3), ZH(3)
 131 DIM D1(115), D2(115), D3(115), D4(115), D5(115), D6(115)
 132 DIM CMS(3), CMK(3), CG(3), SG(60), TX(16), TY(16), TC(16), QX(3), QY(3), QC(3), EB(6), EX(6), EY(6)
-133 DIM MC(319), RV(24), RH(24)
+133 DIM MC(399), BK(887), KS(73), KM(73), KF(73), KB(73), RV(24), RH(24)
 140 FOR I = 1 TO 9: READ RX!(I), RY!(I): NEXT I
 150 FOR I = 1 TO 3: READ SN$(I), SD$(I), SA(I): NEXT I
 155 FOR I = 1 TO 6: READ EU(I), EV(I): NEXT I
@@ -40,13 +40,16 @@
 187 BLOAD LD$ + "CP1.SPR", VARPTR(C1(0)): BLOAD LD$ + "CP2.SPR", VARPTR(C2(0)): BLOAD LD$ + "CP3.SPR", VARPTR(C3(0))
 188 BLOAD LD$ + "CP4.SPR", VARPTR(C4(0)): BLOAD LD$ + "CP5.SPR", VARPTR(C5(0)): BLOAD LD$ + "CP6.SPR", VARPTR(C6(0))
 189 BLOAD LD$ + "CP7.SPR", VARPTR(C7(0)): BLOAD LD$ + "CM1.SPR", VARPTR(M1(0)): BLOAD LD$ + "CM2.SPR", VARPTR(M2(0))
+190 RP! = VARPTR(BK(0)): QB = RP! + 65536! * (RP! > 32767): RP! = VARPTR(KS(0)): QS = RP! + 65536! * (RP! > 32767): RP! = VARPTR(KM(0)): QM = RP! + 65536! * (RP! > 32767)
 191 BLOAD LD$ + "CM3.SPR", VARPTR(M3(0)): BLOAD LD$ + "CM4.SPR", VARPTR(M4(0)): BLOAD LD$ + "CM5.SPR", VARPTR(M5(0))
 192 BLOAD LD$ + "CM6.SPR", VARPTR(M6(0)): BLOAD LD$ + "CM7.SPR", VARPTR(M7(0))
+193 BLOAD LD$ + "BRAKE.SPR", VARPTR(BK(0)): REM braking burn cutscene: 4 poses x ship, mask, flame (74 ints each)
 194 BLOAD LD$ + "DU1.SPR", VARPTR(D1(0)): BLOAD LD$ + "DU2.SPR", VARPTR(D2(0)): BLOAD LD$ + "DU3.SPR", VARPTR(D3(0))
 195 SCREEN 1, 0: COLOR 0, 1: PLAY "MB"
 196 BLOAD LD$ + "DU4.SPR", VARPTR(D4(0)): BLOAD LD$ + "DU5.SPR", VARPTR(D5(0)): BLOAD LD$ + "DU6.SPR", VARPTR(D6(0))
 197 BLOAD LD$ + "CKPIT.BIN", VARPTR(MC(0)): CA! = VARPTR(MC(0)): PR(0) = 0: CALL CA!(PR(0)): CS = PR(1): PR(0) = 1
 198 IF CS THEN DEF SEG = CS: BLOAD LD$ + "CKCOM.DAT", 49408!: DEF SEG: REM 64K from DOS for the cockpit view scenery
+199 PR(0) = 0: CALL CA!(PR(0)): SB = PR(1): RP! = VARPTR(H(0)): HP = RP! + 65536! * (RP! > 32767): REM 64K more: the site and its danger screens
 200 REM ==== phase 1: orbit - drift left/right, then burn down to a site (no fuel, no points) ====
 210 OUT &H3D8, &H6: CLS
 220 DEF SEG = &HB800: BLOAD LD$ + "ORBIT.PIC", 0: DEF SEG
@@ -61,7 +64,7 @@
 270 IF K$ = CHR$(0) + "K" OR K$ = "4" OR K$ = "7" OR K$ = "1" THEN BV! = BV! - 10: PF = 4: PT! = T1! + .2
 275 IF K$ = CHR$(0) + "M" OR K$ = "6" OR K$ = "9" OR K$ = "3" THEN BV! = BV! + 10: PF = 6: PT! = T1! + .2
 280 IF K$ = CHR$(0) + "P" OR K$ = "2" OR K$ = CHR$(13) THEN 400
-285 IF K$ = CHR$(27) THEN SK% = 1: PR(0) = 3: CALL CA!(PR(0)): ON ERROR GOTO 8800: CHAIN "MOON"
+285 IF K$ = CHR$(27) THEN SK% = 1: PR(0) = 3: PR(1) = SB: CALL CA!(PR(0)): PR(1) = CS: CALL CA!(PR(0)): ON ERROR GOTO 8800: CHAIN "MOON"
 290 GOTO 265
 300 IF BV! > 60 THEN BV! = 60 ELSE IF BV! < -60 THEN BV! = -60
 305 BV! = BV! * (1 - .6 * DT!): BX! = BX! + BV! * DT!
@@ -79,17 +82,18 @@
 400 REM ---- descent: the up-facing thrusters push the lander down toward the site ----
 405 IF SA(ZN) = 0 THEN M$ = SN$(ZN) + " - COMING SOON": LINE (0, 16)-(319, 23), 0, BF: LOCATE 3, 21 - LEN(M$) \ 2: PRINT M$;: SOUND 150, 4: MT! = T1! + 2.5: GOTO 265
 410 LV = ZN: LS% = ZN: LN = 1: PLAY "T200O3L32CDEFGAB"
-415 PF = 2: FOR J = 1 TO 6: XI = BI: YI = BY + 2 * J: GOSUB 5000
+415 PF = 2: FOR J = 1 TO 10: XI = BI: YI = BY + 3 * J: GOSUB 5000
 430 SOUND 120 - J * 8, 1: WD! = .1: GOSUB 7900: NEXT J
 435 WD! = .4: GOSUB 7900
 440 IF INKEY$ <> "" THEN 440
-445 GOTO 1000
+445 GOSUB 1200: GOTO 1000
 1000 REM ==== load and start the level ====
 1010 OUT &H3D8, &H6: CLS
 1015 ON LV GOSUB 8700, 8710, 8720: READ PC$, MP$, X!, Y!, VX!, VY!, FM!, NP: FOR I = 1 TO NP: READ LA(I), LB(I), LM(I): NEXT I
-1020 DEF SEG = &HB800: BLOAD LD$ + PC$, 0: DEF SEG
-1030 BLOAD LD$ + MP$, VARPTR(H(0))
-1050 F! = FM!: TH = 0: PF = 0: OX = -1: OF = -1: OP = -1
+1020 IF SB = 0 THEN DEF SEG = &HB800: BLOAD LD$ + PC$, 0: DEF SEG: BLOAD LD$ + MP$, VARPTR(H(0)): GOTO 1050
+1025 IF LL <> LV THEN GOSUB 1100
+1030 PR(0) = 4: PR(1) = SB: PR(2) = 1: PR(3) = HP: CALL CA!(PR(0)): REM show the site from memory, its map into H()
+1050 SN = 1: MX = -1: F! = FM!: TH = 0: PF = 0: OX = -1: OF = -1: OP = -1
 1060 OUT &H3D8, &HE: OUT &H3D9, 0
 1070 LOCATE 1, 17: PRINT USING "LANDER #/3"; LN;
 1080 LOCATE 4, 21 - LEN(SN$(LV)) \ 2: PRINT SN$(LV);
@@ -97,6 +101,31 @@
 1092 TL = -1: LF! = 0: F7! = FM! * .15: CXM = 8 + INT(RND * 40): MV! = 0: CM = 0: SD = 0: CL = 0: F6 = 0: F3 = 0: A12! = 0: G12! = 0: IF RND < .15 THEN A12! = T0! + 4 + RND * 8
 1093 NR = 0: RI = 0: REM the flight recorder: last 25 samples, 0.4 s apart
 1094 GOSUB 2620
+1096 GOTO 2000
+1100 REM ---- the site and the danger screens either side, into memory once per site (slots 0 left, 1 site, 2 right) ----
+1102 DEF SEG = SB: BLOAD LD$ + PC$, 16384: BLOAD LD$ + MP$, 50432!: C$ = LEFT$(PC$, LEN(PC$) - 4)
+1104 BLOAD LD$ + C$ + "L.MAP", 49152!: BLOAD LD$ + C$ + "R.MAP", 51712!: BLOAD LD$ + C$ + "L.RLE", 53248!: DEF SEG
+1106 PR(0) = 6: PR(1) = SB: PR(2) = 0: PR(3) = -12288: CALL CA!(PR(0))
+1108 DEF SEG = SB: BLOAD LD$ + C$ + "R.RLE", 53248!: DEF SEG: PR(0) = 6: PR(2) = 2: CALL CA!(PR(0)): LL = LV: RETURN
+1200 REM ==== braking burn: from orbit down toward the site, hands off (any key skips), no fuel used ====
+1202 IF SB = 0 THEN RETURN
+1204 OUT &H3D8, &H6: DEF SEG = SB: BLOAD LD$ + "BRAKE.RLE", 53248!: DEF SEG: PR(0) = 6: PR(1) = SB: PR(2) = -1: PR(3) = -12288: CALL CA!(PR(0))
+1205 RP! = VARPTR(KF(0)): QF = RP! + 65536! * (RP! > 32767)
+1206 OUT &H3D8, &HE: LOCATE 3, 21 - LEN(SN$(LV)) \ 2: PRINT SN$(LV);: M$ = "POWERED DESCENT": GOSUB 1250: OX = -1: J = -1: PN = 0: T0! = TIMER
+1210 RP! = (TIMER - T0!) / 5: IF RP! > 1 OR INKEY$ <> "" THEN 1240
+1212 XI = 12 + INT(210 * (1 - (1 - RP!) ^ 2)): YI = 40 + INT(36 * RP! * RP!): K = 0: IF RP! > .5 THEN K = INT((RP! - .5) * 8) + 1: IF K > 3 THEN K = 3
+1214 IF K <> J THEN J = K: GOSUB 1230
+1216 IF OX >= 0 THEN PUT (OX, OY), KB, PSET
+1218 GET (XI, YI)-(XI + 23, YI + 23), KB: PUT (XI, YI), KM, AND: PUT (XI, YI), KS, OR: IF PN AND 1 THEN PUT (XI, YI), KF, OR
+1220 OX = XI: OY = YI: PN = PN + 1: SOUND 40 + RND * 30, 1: GOTO 1210
+1228 REM ---- pose K: copy its ship, mask and flame out of BK() into the arrays PUT uses (PUT can't take BK(n)) ----
+1230 RP! = QB + 444! * K: PR(0) = 8: PR(4) = 74: PR(2) = RP! + 65536! * (RP! > 32767): PR(3) = QS: CALL CA!(PR(0))
+1232 RP! = RP! + 148: PR(2) = RP! + 65536! * (RP! > 32767): PR(3) = QM: CALL CA!(PR(0)): RP! = RP! + 148: PR(2) = RP! + 65536! * (RP! > 32767): PR(3) = QF: CALL CA!(PR(0))
+1234 IF K = 1 THEN M$ = "PITCHOVER": GOSUB 1250 ELSE IF K = 3 THEN M$ = "APPROACH PHASE": GOSUB 1250
+1236 RETURN
+1240 IF INKEY$ <> "" THEN 1240
+1242 WD! = .5: GOSUB 7900: RETURN
+1250 LINE (0, 8)-(319, 15), 0, BF: LOCATE 2, 21 - LEN(M$) \ 2: PRINT M$;: RETURN
 2000 REM ==== main loop ====
 2010 T1! = TIMER: DT! = T1! - T0!: IF DT! < .05 AND DT! >= 0 THEN 2010
 2020 IF DT! > .3 OR DT! < 0 THEN DT! = .3
@@ -107,15 +136,15 @@
 2100 A! = GR!
 2110 IF TH > 0 THEN A! = GR! - AM! * TH / 10: F! = F! - BU! * TH / 10 * DT!: IF F! <= 0 THEN F! = 0: TH = 0
 2120 VY! = VY! + A! * DT!: X! = X! + VX! * DT!: Y! = Y! + VY! * DT!
-2130 IF X! < 4 THEN X! = 4: VX! = 0
-2140 IF X! > 288 THEN X! = 288: VX! = 0
-2150 IF Y! < 21 THEN Y! = 21: IF VY! < 0 THEN VY! = 0
+2130 IF X! < 4 THEN GOSUB 2810
+2140 IF X! > 288 THEN GOSUB 2820
+2150 IF Y! < -300 THEN Y! = -300: IF VY! < 0 THEN VY! = 0
 2160 XI = INT(X!): YI = INT(Y!)
 2170 IF YI + 22 >= H(320 + XI) THEN 4000
 2180 FL = -(TH > 0) - (TH > 3) - (TH > 7)
 2190 IF T1! > PT! THEN PF = 0
 2195 IF DU THEN GOSUB 2300
-2200 IF XI <> OX OR YI <> OY OR FL <> OF OR PF <> OP THEN IF YI < 46 AND CM THEN GOSUB 2650 ELSE GOSUB 5000
+2200 IF XI <> OX OR YI <> OY OR FL <> OF OR PF <> OP THEN IF YI < 46 THEN GOSUB 2660 ELSE GOSUB 5000
 2205 Z = H(XI + 14) - YI - 22: IF Z < 30 THEN GOSUB 2340
 2210 IF T1! >= HT! THEN GOSUB 6000: HT! = T1! + .4
 2220 IF TT! > 0 THEN IF T1! > TT! THEN LINE (80, 24)-(239, 31), 0, BF: TT! = 0
@@ -151,6 +180,15 @@
 2620 GET (CXM, 36)-(CXM + 3, 37), CG: PUT (CXM, 36), CMK, AND: PUT (CXM, 36), CMS, OR: CM = 1: RETURN
 2650 REM ---- lander up near the module: take the module off, redraw the lander, put the module back ----
 2652 GOSUB 2600: GOSUB 5000: GOSUB 2620: RETURN
+2660 IF YI < 21 THEN 2670
+2662 IF MX >= 0 THEN GOSUB 2680
+2664 IF CM THEN 2652 ELSE 5000
+2668 REM ---- above the top of the screen: the lander hides, a marker on the top edge shows where it is ----
+2670 IF OX >= 0 THEN GOSUB 2600: PUT (OX - 4, OY - 3), BG, PSET: OX = -1: GOSUB 2620
+2672 I = XI + 14: IF I < 2 THEN I = 2 ELSE IF I > 317 THEN I = 317
+2674 IF I = MX THEN RETURN ELSE IF MX >= 0 THEN GOSUB 2680
+2676 MX = I: LINE (MX - 2, 20)-(MX + 2, 20), 1: PSET (MX, 19), 1: RETURN
+2680 LINE (MX - 2, 19)-(MX + 2, 20), 0, BF: MX = -1: RETURN
 2700 REM ---- lander shadow on the surface (sun high on the right, shadow falls left): erase / draw ----
 2705 PUT (SXO, SYO), SG, PSET: SD = 0: RETURN
 2720 SXO = XI + 9 - INT(Z * .7): IF SXO < 0 THEN SXO = 0 ELSE IF SXO > 309 THEN SXO = 309
@@ -161,6 +199,14 @@
 2729 IF SYB - SYO > 30 OR SYB > 197 THEN RETURN
 2730 GET (SXO, SYO)-(SXO + 9, SYB + 1), SG: LINE (SXO, H1)-(SXO + 3, H2), 0: LINE -(SXO + 6, H3), 0: LINE -(SXO + 9, H4), 0
 2732 LINE (SXO, H1 + 1)-(SXO + 3, H2 + 1), 0: LINE -(SXO + 6, H3 + 1), 0: LINE -(SXO + 9, H4 + 1), 0: SD = 1: RETURN
+2798 REM ---- off the side: flip to the danger screen there (or back), from memory ----
+2800 IF DU THEN GOSUB 2300
+2802 PR(0) = 4: PR(1) = SB: PR(2) = SN: PR(3) = HP: CALL CA!(PR(0)): OX = -1: SD = 0: CM = 0: MX = -1: TL = -1
+2804 GOSUB 2620: LOCATE 1, 17: PRINT USING "LANDER #/3"; LN;: RETURN
+2810 IF SN = 0 OR SB = 0 THEN X! = 4: VX! = 0: RETURN
+2812 SN = SN - 1: X! = X! + 284: GOTO 2800
+2820 IF SN = 2 OR SB = 0 THEN X! = 288: VX! = 0: RETURN
+2822 SN = SN + 1: X! = X! - 284: GOTO 2800
 3000 REM ---- one key ----
 3010 Q = 0: K = 0
 3020 IF LEN(K$) = 2 THEN K = INSTR("OPQKLMGHI", RIGHT$(K$, 1)): GOTO 3060
@@ -183,6 +229,7 @@
 4040 CT = 0: R$ = "": R2$ = "": D = SGN(VX!): IF D = 0 THEN D = 1
 4050 IF ABS(VX!) > VXS! THEN CT = 3: IF ABS(VX!) > 3 AND F! > FM! * .25 AND RND < .2 THEN CT = 5
 4060 IF CT = 0 AND (LF <> MN OR RG <> MN) THEN CT = 4
+4062 IF CT = 0 AND SN <> 1 THEN CT = 4: REM the danger screens have nowhere safe
 4070 IF CT = 0 AND VY! > VYS! THEN CT = 1
 4080 IF VY! > 7 AND CT <> 5 THEN CT = 2
 4085 IF TT! > 0 THEN LINE (80, 24)-(239, 31), 0, BF: TT! = 0
@@ -292,7 +339,7 @@
 6020 IF W > 0 THEN LINE (42, 2)-(41 + W, 4), 1, BF
 6030 IF W < 78 THEN LINE (42 + W, 2)-(119, 4), 0, BF
 6040 AL = (H(XI + 14) - YI - 22) * 5: IF AL < 0 THEN AL = 0
-6045 RI = (RI + 1) MOD 25: RA(RI) = AL \ 5: RD(RI) = INT(X! * 4): RV(RI) = INT(VY! * 10): RH(RI) = INT(VX! * 10): RT(RI) = TH: NR = NR + 1
+6045 RI = (RI + 1) MOD 25: RA(RI) = AL \ 5: RD(RI) = INT((X! + 284 * (SN - 1)) * 4): RV(RI) = INT(VY! * 10): RH(RI) = INT(VX! * 10): RT(RI) = TH: NR = NR + 1
 6050 LOCATE 2, 1: PRINT USING "ALT #### H+##.# V+##.# THR ###"; AL; VX!; -VY!; TH * 10;
 6060 I = INT(T1! - ST!): IF I <> TL THEN TL = I: LOCATE 1, 32: PRINT USING "T ##"; I \ 60;: PRINT ":"; RIGHT$(STR$(100 + I MOD 60), 2);
 6062 IF T1! > LF! THEN GOSUB 6100
@@ -359,7 +406,8 @@
 7410 PZ = 4 + (D > 0): CX = CX + 4 * D: GC = H(CX): GOSUB 7000: DW = 12: GOSUB 7800: WD! = .35: GOSUB 7900
 7420 CX = CX + 6 * D: GC = H(CX): GOSUB 7000: GOSUB 7800: WD! = .3: GOSUB 7900
 7430 PZ = 7: CX = CX + 6 * D: GC = H(CX): GOSUB 7000: DW = 18: GOSUB 7800: SOUND 55, 3: WD! = .6: GOSUB 7900
-7440 R$ = "SLID OFF THE RIM": R2$ = "GROUND TOO STEEP": RETURN
+7440 R$ = "SLID OFF THE RIM": R2$ = "GROUND TOO STEEP": IF SN <> 1 THEN R$ = "NO SAFE GROUND": R2$ = "ROCKS AND STEEP SLOPES"
+7442 RETURN
 7500 REM ---- 5 rare: impact jams the main engine on and a side thruster firing ----
 7510 R$ = "MAYDAY": R2$ = "THRUSTER MALFUNCTION": GOSUB 7850: SOUND 100, 1
 7520 VY! = -2: VX! = VX! + 2 * D: Y! = YI - 1: X! = XI: T0! = TIMER: AT! = 0: ALM = 0: RL! = F! / 1.5: IF RL! < 100 THEN RL! = 100
@@ -455,7 +503,7 @@
 9090 REM ---- debris directions for the explosion (x step, upward step) ----
 9095 DATA -5,6, -3,8, -1,9, 2,9, 4,7, 5,5
 9096 REM ---- phase 1 zone highlight boxes (x0, y0, x1, y1), matching ORBIT.PIC ----
-9097 DATA 5,93,97,113, 117,85,193,105, 213,93,313,113
+9097 DATA 5,117,97,137, 117,109,193,129, 213,117,313,137
 9100 REM ---- levels: picture, map, start x, y, x speed, y speed, fuel, pads (left x, right x, multiplier) ----
 9110 DATA "EASY.PIC", "EASY.MAP", 40, 24, 6, 1, 800, 3, 12,68,2, 140,184,3, 256,292,5
 9120 REM Fra Mauro: rolling hills, a ridge to climb, boulders, Cone crater

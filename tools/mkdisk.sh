@@ -3,8 +3,8 @@
 # Put your own DISK01.IMG (MS-DOS 3.30 disk 1) and GWBASIC.EXE in dos/ (not committed).
 #   START.IMG    bootable: DOS + GW-BASIC + title, high scores, mission menu (MOON.BAS).
 #                For the real floppy in drive A:. HISCORE.DAT is saved here.
-#   LANDING.IMG  the Lunar Landing level (LANDER.BAS + its art), for drive B: (Gotek).
-#                Also has GW-BASIC and PLAY.BAT so the level can be run on its own.
+#   LANDING.IMG  the Lunar Landing level (LANDER.BAS + its art), for drive B:.
+#                No GW-BASIC on it: the START disk runs it, which leaves room for the level.
 # usage: tools/mkdisk.sh [START.IMG] [LANDING.IMG]
 set -e
 R=$(cd "$(dirname "$0")/.." && pwd)
@@ -24,7 +24,6 @@ printf '@ECHO OFF\r\nECHO.\r\nECHO  MOON MISSION - put a mission disk in drive B
 EXTRA=""
 if [ -f "$R/dos/SPEED.COM" ]; then EXTRA="$R/dos/SPEED.COM"; printf 'ECHO  (type SPEED F first for Laser XT fast mode)\r\n' >> "$T/AUTOEXEC.BAT"; fi
 printf 'ECHO.\r\n' >> "$T/AUTOEXEC.BAT"
-printf '@ECHO OFF\r\nGWBASIC LANDER\r\n' > "$T/PLAY.BAT"
 
 # ---------- START disk ----------
 cp "$R/dos/DISK01.IMG" "$START"
@@ -43,7 +42,7 @@ echo "START:   $(mdir -i "$START" ::/ | grep free | xargs)"
 rm -f "$LAND"
 dd if=/dev/zero of="$LAND" bs=1024 count=360 2>/dev/null
 mformat -i "$LAND" -f 360 -v LUNARLAND ::
-LEVEL=$(ls "$R"/assets/*.PIC "$R"/assets/*.SPR "$R"/assets/*.MAP "$R"/assets/*.DAT "$R"/assets/CKPIT.BIN | grep -v -E '/(MOONBG\.PIC|EARTH\.SPR|TITLE\.SPR|OFL\.SPR|OLM\.SPR|OLMK\.SPR|WRECK\.SPR|CRATER\.SPR)$')
-mcopy -o -i "$LAND" "$R/dos/GWBASIC.EXE" "$R/build/tok/LANDER.BAS" $LEVEL "$T/PLAY.BAT" ::/
+LEVEL=$(ls "$R"/assets/*.PIC "$R"/assets/*.SPR "$R"/assets/*.MAP "$R"/assets/*.DAT "$R"/assets/*.RLE "$R"/assets/CKPIT.BIN | grep -v -E '/(MOONBG\.PIC|EARTH\.SPR|TITLE\.SPR|OFL\.SPR|OLM\.SPR|OLMK\.SPR|WRECK\.SPR|CRATER\.SPR)$')
+mcopy -o -i "$LAND" "$R/build/tok/LANDER.BAS" $LEVEL ::/
 echo "LANDING: $(mdir -i "$LAND" ::/ | grep free | xargs)"
 rm -rf "$T"
