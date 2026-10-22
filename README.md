@@ -11,15 +11,13 @@ The game is split into one start disk and one disk per mission, built by `tools/
 
 | Disk | Drive | What's on it |
 |---|---|---|
-| `START.IMG` (label MOONSTART) | A: (real floppy) | Bootable MS-DOS 3.30, GW-BASIC, `SPEED.COM`, the title, high scores and mission menu (`MOON.BAS`). The high score table is saved here as `LANDHS.DAT`. |
+| `START.IMG` (label MOONSTART) | A: | A game disk: only the DOS boot files, GW-BASIC and the game. It boots straight into Moon Mission (title, high scores, mission menu: `MOON.BAS`). On a Laser XT it switches to fast mode first (`LASERCHK` finds the Laser's Central Point BIOS, then `SPEED F`); other PCs skip that, since SPEED writes to a port that is the hard disk controller on AT-class machines. High scores are saved here as `LANDHS.DAT`. |
 | `LANDING.IMG` (label LUNARLAND) | B: | The Moon Landing level (`LANDER.BAS`) and all of its art. No GW-BASIC: the START disk runs it, so the space goes to the level. Future levels get their own disk, or share one, depending on size. |
 
 Both disks work as real 360K floppies in two drives, or with a Gotek as B:. To make a floppy from an image on the Gotek: `DISKCOPY B: A:`. Leave the START floppy's write-protect tab off so high scores can be saved.
 
 ## Playing
-1. Boot from the START floppy in A:, with the LUNAR LANDING disk in B:.
-2. `SPEED F` for Laser XT fast mode (optional, smoother).
-3. `GO`.
+Boot from the START floppy in A: with the LUNAR LANDING disk in B:. The game starts on its own (fast mode is switched on for a Laser XT). After EXIT TO DOS, `GO` starts it again.
 
 The title plays an Earthrise to *Also sprach Zarathustra*, then shows the high scores. Any key goes to the mission menu. If the level disk isn't in B:, the menu asks for it instead of stopping.
 
@@ -68,6 +66,7 @@ A fast pilot does best on the far, high-paying pad; a slower one often scores mo
 | `assets/*.PIC` | `BLOAD` images of CGA video RAM: title moon, orbit, the three landing sites, landed / wreck / crater pictures |
 | `assets/*.MAP` | Collision maps for each site: ground height per column, and the highest ground under the lander's footprint |
 | `assets/*.SPR` | `GET`/`PUT` sprites: lander and mask, engine flames, thruster puffs, crash poses, dust plumes, Earth, title |
+| `asm/laserchk.asm` | `LASERCHK.COM`: exits with ERRORLEVEL 1 on a Laser XT (looks for "Central Point" in the BIOS ROM) |
 | `tools/mkdisk.sh` | Builds `START.IMG` and `LANDING.IMG` (needs your own DOS disk, GW-BASIC and SPEED.COM in `dos/`) |
 | `tools/mkart.py`, `tools/earth.py` | Title art: cratered moon, starfield, title, the lit Earth from real coastline data (`pip install global-land-mask`) |
 | `tools/mklevel.py`, `tools/mksites.py` | Tranquility, and Fra Mauro / Hadley Rille terrain, pads and collision maps; lander, flame and crash sprites |
