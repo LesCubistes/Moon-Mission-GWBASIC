@@ -451,17 +451,17 @@
 8035 IF HR > 0 AND HE THEN LOCATE 21, 12: PRINT "(DISK ERROR: NOT SAVED)";
 8040 IF INKEY$ = "" THEN 8040
 8050 GOTO 200
-8100 REM ---- load the high score table (defaults if HISCORE.DAT is missing) ----
+8100 REM ---- load the high score table (empty until the first scores are saved in LANDHS.DAT) ----
 8110 HE = 0: ON ERROR GOTO 8180
-8120 OPEN "HISCORE.DAT" FOR INPUT AS #1
+8120 OPEN "LANDHS.DAT" FOR INPUT AS #1
 8130 IF HE = 0 THEN FOR I = 1 TO 10: INPUT #1, HN$(I), HS!(I), HL$(I): NEXT I
 8140 CLOSE #1: ON ERROR GOTO 0
-8150 IF HE THEN RESTORE 9200: FOR I = 1 TO 10: READ HN$(I), HS!(I), HL$(I): NEXT I
+8150 IF HE THEN FOR I = 1 TO 10: HN$(I) = "": HS!(I) = 0: HL$(I) = "": NEXT I
 8160 RETURN
 8180 HE = 1: RESUME NEXT
 8300 REM ---- save the table ----
 8310 HE = 0: ON ERROR GOTO 8180
-8320 OPEN "HISCORE.DAT" FOR OUTPUT AS #1
+8320 OPEN "LANDHS.DAT" FOR OUTPUT AS #1
 8330 IF HE = 0 THEN FOR I = 1 TO 10: WRITE #1, HN$(I), HS!(I), HL$(I): NEXT I
 8340 CLOSE #1: ON ERROR GOTO 0: RETURN
 8400 REM ---- new high score: find the rank, type initials, insert, save ----
@@ -485,7 +485,8 @@
 8500 REM ---- draw the high score table; HR = rank to highlight (0 = none) ----
 8510 LINE (32, 44)-(287, 171), 0, BF: LINE (32, 44)-(287, 171), 1, B
 8520 LOCATE 7, 15: PRINT "HIGH SCORES";: LINE (116, 57)-(203, 57), 1
-8530 FOR I = 1 TO 10: LOCATE 8 + I, 7: PRINT USING "##. \ \  ######  "; I; HN$(I); HS!(I);: PRINT HL$(I);: NEXT I
+8530 FOR I = 1 TO 10: LOCATE 8 + I, 7: IF HS!(I) > 0 THEN PRINT USING "##. \ \  ######  "; I; HN$(I); HS!(I);: PRINT HL$(I); ELSE PRINT USING "##.  ---"; I;
+8535 NEXT I
 8540 IF HR THEN LINE (44, 55 + 8 * HR)-(277, 64 + 8 * HR), 2, B
 8550 RETURN
 8690 REM ---- point READ at the chosen site's level data ----
@@ -510,11 +511,6 @@
 9130 DATA "MEDIUM.PIC", "MEDIUM.MAP", 40, 24, 8, 1, 700, 3, 18,64,3, 150,190,5, 270,304,7
 9140 REM Hadley Rille: Mount Hadley, the x7 pad down in the rille, the x10 mesa by Hadley Delta
 9150 DATA "HARD.PIC", "HARD.MAP", 20, 24, 10, 1, 650, 3, 8,48,4, 190,224,7, 282,313,10
-9190 REM ---- default high scores: initials, score, site ----
-9200 DATA "ARM", 6000, "TRANQUILITY", "ALD", 5000, "TRANQUILITY", "SHE", 4500, "FRA MAURO"
-9210 DATA "SCO", 4000, "HADLEY RILLE", "MIT", 3500, "FRA MAURO", "IRW", 3000, "HADLEY RILLE"
-9220 DATA "DUK", 2500, "TRANQUILITY", "ROO", 2000, "FRA MAURO", "WOR", 1500, "HADLEY RILLE"
-9230 DATA "COL", 1000, "TRANQUILITY"
 9596 REM ---- orbit stars that twinkle: count, then x, y, colour (tools/mkstars.py on ORBIT.PIC) ----
 9600 DATA 14,13,35,3,33,33,3,39,123,3,43,118,1,65,29,1,67,28,1,67,33,3,73,39
 9601 DATA 3,92,39,3,97,34,3,298,130,3,307,32,1,312,133,1,313,129,3

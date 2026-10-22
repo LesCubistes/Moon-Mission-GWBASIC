@@ -11,7 +11,7 @@ The game is split into one start disk and one disk per mission, built by `tools/
 
 | Disk | Drive | What's on it |
 |---|---|---|
-| `START.IMG` (label MOONSTART) | A: (real floppy) | Bootable MS-DOS 3.30, GW-BASIC, `SPEED.COM`, the title, high scores and mission menu (`MOON.BAS`). The high score table is saved here as `HISCORE.DAT`. |
+| `START.IMG` (label MOONSTART) | A: (real floppy) | Bootable MS-DOS 3.30, GW-BASIC, `SPEED.COM`, the title, high scores and mission menu (`MOON.BAS`). The high score table is saved here as `LANDHS.DAT`. |
 | `LANDING.IMG` (label LUNARLAND) | B: | The Moon Landing level (`LANDER.BAS`) and all of its art. No GW-BASIC: the START disk runs it, so the space goes to the level. Future levels get their own disk, or share one, depending on size. |
 
 Both disks work as real 360K floppies in two drives, or with a Gotek as B:. To make a floppy from an image on the Gotek: `DISKCOPY B: A:`. Leave the START floppy's write-protect tab off so high scores can be saved.
@@ -57,7 +57,7 @@ Each level gives 3 landers. A crash with landers left shows a short report and t
 | Fra Mauro (Medium) | 700 | x3 / x5 / x7 |
 | Hadley Rille (Hard) | 650 | x4 / x7 / x10 |
 
-A fast pilot does best on the far, high-paying pad; a slower one often scores more on a closer pad. The top 10 (initials, score, site) are saved on the START disk.
+A fast pilot does best on the far, high-paying pad; a slower one often scores more on a closer pad. The top 10 (initials, score, site) are saved on the START disk. The table starts empty and fills as you play.
 
 ## Files
 | File | What it is |
