@@ -51,6 +51,7 @@ require separate sign-off by the maintainer before publication.
 '''
 (stage / 'RELEASE.txt').write_text(readme)
 shutil.copytree(root / 'src', stage / 'source')
+shutil.copy2(root / 'README.md', stage / 'README.md')
 archive = release / 'Moon-Mission-game.zip'
 with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as z:
     for path in sorted(stage.rglob('*')):
