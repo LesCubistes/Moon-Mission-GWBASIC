@@ -1,0 +1,46 @@
+name: Ryan prepares a release
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'New release tag (for example v0.1.0)'
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  authorize:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Only Ryan can trigger the release
+        env:
+          ACTOR: ${{ github.actor }}
+          OWNER: ${{ github.repository_owner }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          test "$ACTOR" = LesCubistes
+          test "$OWNER" = LesCubistes
+          [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]]
+  compatibility:
+    needs: authorize
+    uses: ./.github/workflows/compatibility.yml
+  draft:
+    needs: compatibility
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build release environment
+        run: docker build -t moon-ci -f tools/ci/Dockerfile .
+      - name: Package tokenized game-only disks
+        run: docker run --init --rm -v "$PWD:/workspace" moon-ci python3 tools/ci/package-release.py
+      - name: Create draft for Ryan to review and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          gh release create "$VERSION" release/Moon-Mission-game.zip release/SHA256SUMS \
+            --target "$COMMIT" --draft --title "Moon Mission $VERSION" \
+            --notes "Emulator matrix passed for this commit. Tokenized game-only disks, sources and art included; supply DOS/GW-BASIC separately. Physical hardware sign-off and release publication remain with Ryan."

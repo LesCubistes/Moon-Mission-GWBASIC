@@ -1,0 +1,23 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run Moon Mission (CGA)",
+      "type": "shell",
+      "command": "./tools/desktop-play.sh",
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Moon Mission (Tandy)",
+      "type": "shell",
+      "command": "./tools/desktop-play.sh tandy",
+      "problemMatcher": []
+    },
+    {
+      "label": "Build original floppy disks",
+      "type": "shell",
+      "command": "bash tools/mkdisk.sh",
+      "problemMatcher": []
+    }
+  ]
+}

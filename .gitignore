@@ -7,3 +7,6 @@ scratch/
 build/
 .DS_Store
 ._*
+
+release/
+__pycache__/
