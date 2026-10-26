@@ -95,25 +95,21 @@
 5040 DATA "O3L4C2G2O4C2.E-16E1"
 5050 DATA "O2L8CO1GO2CO1G", "O2CO1GO2CO1GO2C4"
 5060 DATA "O3L4C2G2O4C2.", "A1B4O5C1."
-8100 REM ---- load the high score table (defaults if HISCORE.DAT is missing) ----
+8100 REM ---- load the high score table (empty until the first scores are saved in LANDHS.DAT) ----
 8110 HE = 0: ON ERROR GOTO 8180
-8120 OPEN "HISCORE.DAT" FOR INPUT AS #1
+8120 OPEN "LANDHS.DAT" FOR INPUT AS #1
 8130 IF HE = 0 THEN FOR I = 1 TO 10: INPUT #1, HN$(I), HS!(I), HL$(I): NEXT I
 8140 CLOSE #1: ON ERROR GOTO 0
-8150 IF HE THEN RESTORE 9200: FOR I = 1 TO 10: READ HN$(I), HS!(I), HL$(I): NEXT I
+8150 IF HE THEN FOR I = 1 TO 10: HN$(I) = "": HS!(I) = 0: HL$(I) = "": NEXT I
 8160 RETURN
 8180 HE = 1: RESUME NEXT
 8500 REM ---- draw the high score table; HR = rank to highlight (0 = none) ----
 8510 LINE (32, 44)-(287, 171), 0, BF: LINE (32, 44)-(287, 171), 1, B
 8520 LOCATE 7, 15: PRINT "HIGH SCORES";: LINE (116, 57)-(203, 57), 1
-8530 FOR I = 1 TO 10: LOCATE 8 + I, 7: PRINT USING "##. \ \  ######  "; I; HN$(I); HS!(I);: PRINT HL$(I);: NEXT I
+8530 FOR I = 1 TO 10: LOCATE 8 + I, 7: IF HS!(I) > 0 THEN PRINT USING "##. \ \  ######  "; I; HN$(I); HS!(I);: PRINT HL$(I); ELSE PRINT USING "##.  ---"; I;
+8535 NEXT I
 8540 IF HR THEN LINE (44, 55 + 8 * HR)-(277, 64 + 8 * HR), 2, B
 8550 RETURN
-9190 REM ---- default high scores: initials, score, site ----
-9200 DATA "ARM", 6000, "TRANQUILITY", "ALD", 5000, "TRANQUILITY", "SHE", 4500, "FRA MAURO"
-9210 DATA "SCO", 4000, "HADLEY RILLE", "MIT", 3500, "FRA MAURO", "IRW", 3000, "HADLEY RILLE"
-9220 DATA "DUK", 2500, "TRANQUILITY", "ROO", 2000, "FRA MAURO", "WOR", 1500, "HADLEY RILLE"
-9230 DATA "COL", 1000, "TRANQUILITY"
 9590 REM ---- stars that twinkle: count, then x, y, colour (picked by tools/mkstars.py from MOONBG.PIC) ----
 9600 DATA 16,10,73,3,11,81,3,28,109,3,30,58,3,44,58,3,52,70,1,71,98,3,93,119
 9601 DATA 3,242,58,3,242,118,3,248,40,1,274,92,3,281,42,3,303,82,1,306,99,3,317,53

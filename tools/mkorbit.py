@@ -23,7 +23,7 @@ rng = np.random.default_rng(7)
 px = np.zeros((H, W), np.uint8)
 
 # ---------- the Moon: a huge disc whose top edge (limb) curves across the lower screen ----------
-TOP, EDGE = 112, 150                      # limb height at screen centre and at the edges
+TOP, EDGE = 136, 170                      # limb height at screen centre and at the edges
 R = (160 ** 2 + (EDGE - TOP) ** 2) / (2 * (EDGE - TOP))
 CY = TOP + R
 limb = np.array([CY - math.sqrt(R * R - (x + .5 - 160) ** 2) for x in range(W)])
@@ -65,9 +65,9 @@ for x in range(W):
 
 # ---------- three equal zones ----------
 ZONES = [  # name, difficulty, name col, diff col, text row (1-based)
-    ("TRANQUILITY", "(EASY)", 2, 5, 13),
-    ("FRA MAURO", "(MEDIUM)", 16, 17, 12),
-    ("HADLEY RILLE", "(HARD)", 28, 31, 13),
+    ("TRANQUILITY", "(EASY)", 2, 5, 16),
+    ("FRA MAURO", "(MEDIUM)", 16, 17, 15),
+    ("HADLEY RILLE", "(HARD)", 28, 31, 16),
 ]
 DIV = [107, 213]                          # zone dividers: 0-106, 107-212, 213-319
 boxes = []
@@ -85,7 +85,7 @@ for x0, y0, x1, y1 in boxes: clear[y0 - 2:y1 + 3, x0 - 2:x1 + 3] = True
 clear[24:48, 112:210] = True                             # command/service module
 clear[16:44, 272:304] = True                             # Earth
 for d in DIV: clear[:, d - 2:d + 3] = True
-clear[44:82, 138:184] = True                             # where the lander starts
+clear[44:112, 138:184] = True                             # where the lander starts
 n = 0
 while n < 70:
     sx, sy = random.randrange(W), random.randrange(26, 140)
@@ -96,7 +96,7 @@ while n < 70:
 for d in DIV:
     for y in range(56, H):
         if y < limb[d] - 1:
-            if y % 4 == 0 and not 80 <= y <= 118: px[y, d] = 1     # gap beside the labels
+            if y % 4 == 0 and not 104 <= y <= 142: px[y, d] = 1     # gap beside the labels
         elif y % 3 == 0: px[y, d] = 1
 
 # site markers on the surface below each label

@@ -2,9 +2,9 @@
 # Build the two Moon Mission disks (360K each). Needs mtools and pcbasic (pip install pcbasic).
 # Put your own DISK01.IMG (MS-DOS 3.30 disk 1) and GWBASIC.EXE in dos/ (not committed).
 #   START.IMG    bootable: DOS + GW-BASIC + title, high scores, mission menu (MOON.BAS).
-#                For the real floppy in drive A:. HISCORE.DAT is saved here.
-#   LANDING.IMG  the Lunar Landing level (LANDER.BAS + its art), for drive B: (Gotek).
-#                Also has GW-BASIC and PLAY.BAT so the level can be run on its own.
+#                For the real floppy in drive A:. LANDHS.DAT (high scores) is saved here.
+#   LANDING.IMG  the Lunar Landing level (LANDER.BAS + its art), for drive B:.
+#                No GW-BASIC on it: the START disk runs it, which leaves room for the level.
 # usage: tools/mkdisk.sh [START.IMG] [LANDING.IMG]
 set -e
 R=$(cd "$(dirname "$0")/.." && pwd)
@@ -19,20 +19,24 @@ for f in MOON LANDER; do
 done
 T=$(mktemp -d)
 printf '@ECHO OFF\r\nGWBASIC MOON\r\n' > "$T/GO.BAT"
-printf '@ECHO OFF\r\nECHO.\r\nECHO  MOON MISSION - put a mission disk in drive B: and type GO\r\n' > "$T/AUTOEXEC.BAT"
-# Laser XT speed utility from your own Laser DOS disk (dos/SPEED.COM, not committed): SPEED F = fast mode
+# The START disk is a game disk: it boots straight into Moon Mission.
+# Laser XT fast mode: SPEED.COM from your own Laser DOS disk (dos/SPEED.COM, not committed), run only
+# when LASERCHK finds the Laser XT's Central Point BIOS (SPEED writes to port 1F0h, the hard disk
+# controller on other PCs).
 EXTRA=""
-if [ -f "$R/dos/SPEED.COM" ]; then EXTRA="$R/dos/SPEED.COM"; printf 'ECHO  (type SPEED F first for Laser XT fast mode)\r\n' >> "$T/AUTOEXEC.BAT"; fi
-printf 'ECHO.\r\n' >> "$T/AUTOEXEC.BAT"
-printf '@ECHO OFF\r\nGWBASIC LANDER\r\n' > "$T/PLAY.BAT"
+printf '@ECHO OFF\r\n' > "$T/AUTOEXEC.BAT"
+if [ -f "$R/dos/SPEED.COM" ]; then
+  EXTRA="$R/dos/SPEED.COM $R/assets/LASERCHK.COM"
+  printf 'LASERCHK\r\nIF ERRORLEVEL 1 SPEED F > NUL\r\n' >> "$T/AUTOEXEC.BAT"
+fi
+printf 'GWBASIC MOON\r\n' >> "$T/AUTOEXEC.BAT"
 
-# ---------- START disk ----------
+# ---------- START disk: DOS boot files only, plus the game ----------
 cp "$R/dos/DISK01.IMG" "$START"
-mattrib -i "$START" -r ::/*.* 2>/dev/null || true
-for f in 4201.CPI 5202.CPI COUNTRY.SYS DISPLAY.SYS DRIVER.SYS APPEND.EXE ASSIGN.COM DISKCOMP.COM \
-         EXE2BIN.EXE FASTOPEN.EXE FDISK.COM GRAFTABL.COM JOIN.EXE NLSFUNC.EXE PRINT.COM RECOVER.COM \
-         SELECT.COM SUBST.EXE KEYB.COM GRAPHICS.COM EDLIN.COM SORT.EXE FIND.EXE COMP.COM LABEL.COM \
-         ATTRIB.EXE ANSI.SYS; do mdel -i "$START" ::/$f 2>/dev/null || true; done
+mattrib -i "$START" -r -h -s ::/*.* 2>/dev/null || true
+for f in $(mdir -i "$START" -b ::/ | sed 's#^::/##'); do
+  case "$f" in IO.SYS|MSDOS.SYS|COMMAND.COM) ;; *) mdel -i "$START" "::/$f" ;; esac
+done
 mattrib -i "$START" +r +h +s ::/IO.SYS ::/MSDOS.SYS
 mcopy -o -i "$START" "$R/dos/GWBASIC.EXE" "$R/build/tok/MOON.BAS" "$R/assets/MOONBG.PIC" \
       "$R/assets/EARTH.SPR" "$R/assets/TITLE.SPR" "$T/GO.BAT" "$T/AUTOEXEC.BAT" $EXTRA ::/
@@ -43,7 +47,7 @@ echo "START:   $(mdir -i "$START" ::/ | grep free | xargs)"
 rm -f "$LAND"
 dd if=/dev/zero of="$LAND" bs=1024 count=360 2>/dev/null
 mformat -i "$LAND" -f 360 -v LUNARLAND ::
-LEVEL=$(ls "$R"/assets/*.PIC "$R"/assets/*.SPR "$R"/assets/*.MAP "$R"/assets/*.DAT "$R"/assets/CKPIT.BIN | grep -v -E '/(MOONBG\.PIC|EARTH\.SPR|TITLE\.SPR|OFL\.SPR|OLM\.SPR|OLMK\.SPR|WRECK\.SPR|CRATER\.SPR)$')
-mcopy -o -i "$LAND" "$R/dos/GWBASIC.EXE" "$R/build/tok/LANDER.BAS" $LEVEL "$T/PLAY.BAT" ::/
+LEVEL=$(ls "$R"/assets/*.PIC "$R"/assets/*.SPR "$R"/assets/*.MAP "$R"/assets/*.DAT "$R"/assets/*.RLE "$R"/assets/CKPIT.BIN | grep -v -E '/(MOONBG\.PIC|EARTH\.SPR|TITLE\.SPR|OFL\.SPR|OLM\.SPR|OLMK\.SPR|WRECK\.SPR|CRATER\.SPR)$')
+mcopy -o -i "$LAND" "$R/build/tok/LANDER.BAS" $LEVEL ::/
 echo "LANDING: $(mdir -i "$LAND" ::/ | grep free | xargs)"
 rm -rf "$T"
