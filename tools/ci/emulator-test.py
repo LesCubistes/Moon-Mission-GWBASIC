@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Assert a real keyboard/screen journey; do not patch or instrument game code."""
 import argparse
+from difflib import SequenceMatcher
 import json
 import os
 from pathlib import Path
@@ -60,17 +61,30 @@ def screenshot(label):
     from PIL import ImageChops
     bright = ImageChops.lighter(ImageChops.lighter(channels[0], channels[1]), channels[2])
     gray = bright.point(lambda x: 0 if x > 80 else 255)
-    regions = {'title': (0, .4), 'menu': (.72, 1), 'return-menu': (.72, 1),
-               'orbit': (0, .09), 'return-orbit': (0, .09),
-               'flight': (0, .25), 'retry': (0, .25), 'crash': (.28, .58)}
-    top, bottom = regions[label]
-    gray = gray.crop((0, int(gray.height * top), gray.width, int(gray.height * bottom)))
+    regions = {'title': (0, 0, 1, .4), 'menu': (.225, .74, .775, .99),
+               'return-menu': (.225, .74, .775, .99),
+               'orbit': (0, 0, 1, .09), 'return-orbit': (0, 0, 1, .09),
+               'flight': (0, 0, 1, .12), 'retry': (0, 0, 1, .12),
+               'crash': (.2, .3, .8, .55)}
+    left, top, right, bottom = regions[label]
+    gray = gray.crop((int(gray.width * left), int(gray.height * top),
+                      int(gray.width * right), int(gray.height * bottom)))
     gray = ImageOps.expand(gray, border=40, fill=255)
     gray.save(out / 'ocr.png')
     result = subprocess.run(['tesseract', str(out / 'ocr.png'), 'stdout', '--psm', '6'], capture_output=True, text=True, check=True)
     text = result.stdout.upper()
     (out / f'{label}.txt').write_text(text)
     return re.sub(r'[^A-Z0-9]', '', text)
+
+def contains(text, expected):
+    # The IBM bitmap font produces occasional OCR substitutions. Require >=85%
+    # agreement within a short substring, never a whole-screen similarity score.
+    for size in range(max(1, len(expected) - 2), len(expected) + 3):
+        for start in range(len(text) - size + 1):
+            if SequenceMatcher(None, expected, text[start:start + size]).ratio() >= .85:
+                return True
+    return False
+
 
 def wait_for(label, patterns, timeout=100):
     end = time.monotonic() + timeout
@@ -80,7 +94,7 @@ def wait_for(label, patterns, timeout=100):
         text = screenshot(label)
         if any(re.search(x, text) for x in ['SYNTAXERROR', 'ILLEGALFUNCTION', 'OUTOFMEMORY', 'FILENOTFOUND', 'UNDEFINEDLINE']):
             raise AssertionError(f'BASIC error during {label}: {text}')
-        if all(re.search(pattern, text) for pattern in patterns):
+        if all(contains(text, pattern) for pattern in patterns):
             checks.append(label)
             print(f'PASS {a.machine}/{a.cycles}: {label}', flush=True)
             return
