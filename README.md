@@ -108,3 +108,54 @@ Needs Python 3 (numpy, Pillow), mtools, PC-BASIC (`pip install pcbasic`, used to
 - Feed background music with small `PLAY` chunks; a full queue makes `PLAY` block.
 
 MS-DOS, GW-BASIC and SPEED.COM are not included.
+
+
+## Desktop development workspace
+
+Open `Moon-Mission.code-workspace` in VS Code. Run `tools/desktop-play.sh` for CGA or `tools/desktop-play.sh tandy` for Tandy emulation; matching tasks are available in VS Code. DOSBox Staging is supplied by the desktop Flatpak. The Steam library entry is **Moon Mission (GW-BASIC)** and currently selects Tandy emulation.
+
+The launcher stages editable sources and art into ignored `build/desktop/start` and `build/desktop/landing` directories, mounted as A: and B:. Scores remain in the staged start directory between launches. It requires `dos/GWBASIC.EXE`; this desktop uses the existing `BASIC.EXE` from `superterran/tandy1000ex`, `img/Tandy System Disk 1 - DOS 2.1.img`, locally renamed to match the original game scripts. No runtime is committed here.
+
+The baseline floppy build uses PC-BASIC 2.0.8 for tokenization (`build/venv`) and the existing Tandy DOS system image. Its local copy in `dos/DISK01.IMG` has BASIC.EXE, LIB.EXE and LINK.EXE removed to make room; the original Tandy system image is unchanged. Run `PATH="$PWD/build/venv/bin:$PATH" bash tools/mkdisk.sh`. Built 360K START and LANDING images have also been copied to the Tandy collection as `usb/DSKA0023.IMG` and `usb/DSKA0024.IMG`.
+
+These remain the original **two-drive** game layout. Single-drive swapping, Tandy hardware palette handling and physical Laser XT/Tandy verification are pending. DOSBox emulation is an initial check, not proof of hardware compatibility.
+
+## Automated compatibility checks and releases
+
+Pull requests and pushes to main run `.github/workflows/compatibility.yml`. The matrix exercises DOSBox's CGA, Tandy and PCjr machine profiles at 300 cycles, plus CGA at 1200 cycles to catch timing assumptions. **CGA is a Laser XT proxy**, not an emulation of its exact motherboard, BIOS or speed utility. The runtime fixture is the existing Tandy system disk in `superterran/tandy1000ex`, pinned by Git revision and SHA-256; it is fetched for tests rather than committed to this project. This tests that interpreter, not every GW-BASIC OEM/version.
+
+Each job builds the original two floppy images, checks the 8086 cockpit assembly against the committed BLOAD payload, and extracts the built images into isolated floppy-directory mounts for keyboard input plus screenshot/OCR assertions for title, mission menu, orbit, descent, unpowered crash, retry, return to orbit/menu and exit. Screenshots, OCR text, emulator logs and a JSON list of reached checkpoints are uploaded even after failure. OCR timeouts fail the job; merely starting DOSBox does not pass it. To run a profile locally:
+
+```sh
+docker build -t moon-ci -f tools/ci/Dockerfile .
+docker run --init --rm -v "$PWD:/workspace" moon-ci bash -euc '
+  python3 tools/ci/prepare-runtime.py
+  bash tools/mkdisk.sh
+  xvfb-run -a -s "-screen 0 1024x768x24" python3 tools/ci/emulator-test.py --machine tandy --cycles 300
+'
+```
+
+The emulated journey is a functional smoke test of the image contents. It does not boot DOS or validate a BIOS floppy controller. Direct image mounts in the classic Ubuntu DOSBox runner truncated mission reads in testing; directory mounts of the exact extracted files avoid that emulator path. Real disk-image boot/read tests remain separate. Successful soft landing/cockpit replay, all three terrain routes, high-score persistence, PCjr/Tandy memory limits, exact palettes, audio quality and single-drive swaps still need dedicated tests and real-hardware sign-off. Palette and disk-swap changes belong to Ryan's separate work.
+
+Ryan (`LesCubistes`) triggers **Ryan prepares a release** manually in Actions and supplies a version such as `v0.1.0`. The workflow reruns the whole matrix, then creates a **draft** release for him to review and publish. There is no automatic release on pushes or tags. Its ZIP contains tokenized BASIC, art, sources, checksums and two 360K **game-only data images**; DOS and the BASIC interpreter are excluded. These data images do not boot by themselves. Runtime-containing test disks are not uploaded as release artifacts.
+
+GW-BASIC is interpreted: tokenization and disk packaging are sufficient for the current distribution. `asm/ckpit.asm` is already compiled 8086 code and can be rebuilt with NASM. A conversion to an EXE/COM compiler would need its own compatibility work around `CHAIN`/`COMMON`, floating-point physics, graphics and the `VARPTR`/`CALL` interface; it is not a prerequisite for releasing this version.
+
+## DualSense through Steam Input
+
+The desktop shortcut has a saved DualSense keyboard layout. `config/steam/dualsense.vdf` preserves the native layout for review/sharing; `tools/setup-steam-input.py --appid YOUR_SHORTCUT_ID` applies it to a connected DualSense using the local Steam CEF endpoint (`127.0.0.1:8080`). That endpoint must already be enabled; the script does not expose it or change global controller settings. It backs up the previous configuration under ignored `build/steam-input`, saves the native Steam configuration and verifies each binding by reading it back. Other installations need to install/import the layout once; this does not silently install a global default on other people's Steam accounts.
+
+| Control | Mapping |
+| --- | --- |
+| Left stick left/right | 4/6, lateral thrust |
+| Left stick up/down | 8/5, increase/decrease main throttle |
+| D-pad | Arrow keys for menus and orbit |
+| Cross | Enter, confirm/descent/next lander |
+| Circle / Options | Escape, return/back |
+| Square | Space, engine off |
+| Triangle | 2, downward thruster |
+| R2 / R1 | 8, increase main throttle |
+| L2 / L1 | 5, decrease main throttle |
+| Create | Enter |
+
+Mappings send plain number keys, so NumLock is not required. This is a digital keyboard layout, not proportional analog control or a new DOS joystick driver. Binding readback is automated; physical controller response and flight feel still need a play check. Fine diagonal thrusters remain available on the original keyboard.
