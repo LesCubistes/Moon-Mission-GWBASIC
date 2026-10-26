@@ -8,7 +8,7 @@ shutil.rmtree(out, ignore_errors=True); os.makedirs(out)
 conf = f"""[sdl]
 output=surface
 [dosbox]
-machine=cga
+machine={os.environ.get("MACHINE", "cga")}
 memsize=1
 [cpu]
 cputype=8086
@@ -21,7 +21,7 @@ pcspeaker=true
 [sblaster]
 sbtype=none
 [autoexec]
-imgmount a {img} -t floppy
+imgmount a {img}{(" " + os.environ["SWAP"]) if os.environ.get("SWAP") else ""} -t floppy
 {"imgmount b " + os.environ["IMGB"] + " -t floppy" if os.environ.get("IMGB") else ""}
 boot a:
 """

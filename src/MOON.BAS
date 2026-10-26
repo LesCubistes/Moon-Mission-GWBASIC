@@ -3,7 +3,9 @@
 25 COMMON SK%, LS%, LD$
 30 DEFINT A-Z: KEY OFF: CLS
 40 EX = 112: EY = 33: HT = 126: SH = 82
-50 Y = 0: K = 0: S = 1: NM = 2: MI = 1: NMU = 0: A$ = "": DT! = .2: T0! = 0: KP = 0: HR = 0: HE = 0: I = 0: LD$ = "B:"
+50 Y = 0: K = 0: S = 1: NM = 2: MI = 1: NMU = 0: A$ = "": DT! = .2: T0! = 0: KP = 0: HR = 0: HE = 0: I = 0: LD$ = "B:": P$ = "": TY = 0
+52 DEF SEG = &H40: I = PEEK(&H10): DEF SEG: IF (I AND &HC1) = 1 THEN LD$ = "A:": REM only one floppy drive: the mission disk goes in A: too
+53 DEF SEG = &HF000: TY = (PEEK(49152!) = &H21): DEF SEG: REM a Tandy 1000 needs its own palette registers set
 55 TS = 0: TW! = 0: TK = 0: NT = 0: SS = 0: SN! = 0: SPX = 0: SPY = 0: SDX = 0: J = 0
 60 DIM E(986), T(682), M$(2), MU$(12), HB(4100), HN$(10), HS!(10), HL$(10)
 65 DIM TX(16), TY(16), TC(16), QX(3), QY(3), QC(3)
@@ -16,7 +18,7 @@
 130 DEF SEG = &HB800: BLOAD "MOONBG.PIC", 0: DEF SEG
 140 BLOAD "EARTH.SPR", VARPTR(E(0))
 150 BLOAD "TITLE.SPR", VARPTR(T(0))
-170 OUT &H3D8, &HE: OUT &H3D9, 0
+170 GOSUB 8950
 180 IF SK% = 1 THEN MI = NMU + 1: GOTO 400
 200 REM ---- earthrise: draw only the rows above the horizon ----
 210 GOSUB 900
@@ -49,14 +51,16 @@
 610 FOR K = 1 TO NM
 620 LINE (108, 150 + 16 * K)-(211, 161 + 16 * K), -2 * (K = S), B
 630 NEXT K: RETURN
-700 REM ---- moon landing: load the level from the LUNAR LANDING disk in drive B: ----
+700 REM ---- moon landing: load the level from the LUNAR LANDING disk (drive B:, or A: when there is only one drive) ----
+705 IF LD$ = "A:" THEN P$ = "INSERT THE LUNAR LANDING DISK": GOSUB 780: IF A$ = CHR$(27) THEN 470
 710 ON ERROR GOTO 750: CHAIN LD$ + "LANDER"
 750 RESUME 755
-755 ON ERROR GOTO 0: GET (16, 60)-(303, 107), HB: LINE (16, 60)-(303, 107), 0, BF: LINE (16, 60)-(303, 107), 2, B
-760 LOCATE 10, 7: PRINT "LUNAR LANDING DISK NOT FOUND";: LOCATE 12, 4: PRINT "PUT IT IN DRIVE B: AND PRESS A KEY";: LOCATE 13, 14: PRINT "(ESC = CANCEL)";
-765 SOUND 200, 3: A$ = INKEY$: IF A$ <> "" THEN 765
-770 GOSUB 900: A$ = INKEY$: IF A$ = "" THEN 770
-775 PUT (16, 60), HB, PSET: IF A$ = CHR$(27) THEN 470 ELSE 700
+755 ON ERROR GOTO 0: P$ = "LUNAR LANDING DISK NOT FOUND": GOSUB 780: IF A$ = CHR$(27) THEN 470 ELSE 710
+780 GET (16, 60)-(303, 107), HB: LINE (16, 60)-(303, 107), 0, BF: LINE (16, 60)-(303, 107), 2, B: LOCATE 10, 21 - LEN(P$) \ 2: PRINT P$;
+782 LOCATE 12, 7: PRINT "IN DRIVE "; LD$; " AND PRESS A KEY";: LOCATE 13, 14: PRINT "(ESC = CANCEL)";
+785 SOUND 200, 3: A$ = INKEY$: IF A$ <> "" THEN 785
+790 GOSUB 900: A$ = INKEY$: IF A$ = "" THEN 790
+795 PUT (16, 60), HB, PSET: RETURN
 800 REM ---- exit ----
 810 SCREEN 0, 0: WIDTH 80: SYSTEM
 900 REM ---- feed music a few notes at a time so PLAY never blocks ----
@@ -110,6 +114,9 @@
 8535 NEXT I
 8540 IF HR THEN LINE (44, 55 + 8 * HR)-(277, 64 + 8 * HR), 2, B
 8550 RETURN
+8940 REM ---- display on, palette cyan / red / grey (CGA: the mode register's B/W bit). A Tandy 1000 picks palette registers 3, 4, 7 for that, so open its palette mask (it masks them to 0-3) and set them ----
+8950 OUT &H3D8, &HE: OUT &H3D9, 0: IF TY = 0 THEN RETURN
+8952 I = INP(&H3DA): OUT &H3DA, 1: OUT &H3DE, &HF: OUT &H3DA, &H10: OUT &H3DE, 0: OUT &H3DA, &H13: OUT &H3DE, 3: OUT &H3DA, &H14: OUT &H3DE, 4: OUT &H3DA, &H17: OUT &H3DE, 7: RETURN
 9590 REM ---- stars that twinkle: count, then x, y, colour (picked by tools/mkstars.py from MOONBG.PIC) ----
 9600 DATA 16,10,73,3,11,81,3,28,109,3,30,58,3,44,58,3,52,70,1,71,98,3,93,119
 9601 DATA 3,242,58,3,242,118,3,248,40,1,274,92,3,281,42,3,303,82,1,306,99,3,317,53

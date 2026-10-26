@@ -17,7 +17,8 @@
 110 K$ = "": C$ = "": R$ = "": R2$ = "": M$ = "": N$ = "": PC$ = "": MP$ = ""
 111 H1 = 0: H2 = 0: H3 = 0: H4 = 0: SYB = 0
 112 LD$ = LD$ + "": SK% = SK%: LS% = LS%: REM create the COMMON ones too (LD$ is "" when run on its own: assets from the current drive)
-113 CS = 0: RI = 0: NR = 0: AW = 0: SN = 1: SB = 0: HP = 0: LL = 0: MX = -1: QB = 0: QS = 0: QM = 0: QF = 0
+113 CS = 0: RI = 0: NR = 0: AW = 0: SN = 1: SB = 0: HP = 0: LL = 0: MX = -1: P$ = "": TY = 0: QB = 0: QS = 0: QM = 0: QF = 0
+114 DEF SEG = &HF000: TY = (PEEK(49152!) = &H21): DEF SEG: REM a Tandy 1000 needs its own palette registers set
 120 DIM PR(9), RA(24), RD(24), RT(24), H(639), SP(146), MK(146), BG(146), F1(146), F2(146), F3(146)
 125 DIM Q1(146), Q2(146), Q3(146), Q4(146), Q6(146), Q7(146), Q9(146)
 127 DIM B2(172), FB(450), C1(172), C2(172), C3(172), C4(172), C5(172), C6(172), C7(172)
@@ -55,7 +56,7 @@
 220 DEF SEG = &HB800: BLOAD LD$ + "ORBIT.PIC", 0: DEF SEG
 230 BX! = 146: BV! = 0: BY = 48: OX = -1: OZ = 0: OP = -1: PF = 0: FL = 0: MT! = 0: ZN = 2: T0! = TIMER
 232 RESTORE 9600: READ NT: FOR I = 1 TO NT: READ TX(I), TY(I), TC(I): NEXT I: TS = 0: TW! = 0: BL! = 0
-240 OUT &H3D8, &HE: OUT &H3D9, 0
+240 GOSUB 8950
 245 IF INKEY$ <> "" THEN 245: REM ignore keys typed while the level was loading
 250 T1! = TIMER: DT! = T1! - T0!: IF DT! < .05 AND DT! >= 0 THEN 250
 255 IF DT! > .3 OR DT! < 0 THEN DT! = .3
@@ -64,7 +65,8 @@
 270 IF K$ = CHR$(0) + "K" OR K$ = "4" OR K$ = "7" OR K$ = "1" THEN BV! = BV! - 10: PF = 4: PT! = T1! + .2
 275 IF K$ = CHR$(0) + "M" OR K$ = "6" OR K$ = "9" OR K$ = "3" THEN BV! = BV! + 10: PF = 6: PT! = T1! + .2
 280 IF K$ = CHR$(0) + "P" OR K$ = "2" OR K$ = CHR$(13) THEN 400
-285 IF K$ = CHR$(27) THEN SK% = 1: PR(0) = 3: PR(1) = SB: CALL CA!(PR(0)): PR(1) = CS: CALL CA!(PR(0)): ON ERROR GOTO 8800: CHAIN "MOON"
+285 IF K$ = CHR$(27) THEN SK% = 1: PR(0) = 3: PR(1) = SB: CALL CA!(PR(0)): PR(1) = CS: CALL CA!(PR(0)): IF LD$ = "A:" THEN P$ = "INSERT THE START DISK": GOSUB 8900
+286 IF K$ = CHR$(27) THEN GOSUB 8960: ON ERROR GOTO 8800: CHAIN "MOON"
 290 GOTO 265
 300 IF BV! > 60 THEN BV! = 60 ELSE IF BV! < -60 THEN BV! = -60
 305 BV! = BV! * (1 - .6 * DT!): BX! = BX! + BV! * DT!
@@ -94,7 +96,7 @@
 1025 IF LL <> LV THEN GOSUB 1100
 1030 PR(0) = 4: PR(1) = SB: PR(2) = 1: PR(3) = HP: CALL CA!(PR(0)): REM show the site from memory, its map into H()
 1050 SN = 1: MX = -1: F! = FM!: TH = 0: PF = 0: OX = -1: OF = -1: OP = -1
-1060 OUT &H3D8, &HE: OUT &H3D9, 0
+1060 GOSUB 8950
 1070 LOCATE 1, 17: PRINT USING "LANDER #/3"; LN;
 1080 LOCATE 4, 21 - LEN(SN$(LV)) \ 2: PRINT SN$(LV);
 1090 T0! = TIMER: ST! = T0!: TT! = T0! + 3: HT! = 0
@@ -111,7 +113,7 @@
 1202 IF SB = 0 THEN RETURN
 1204 OUT &H3D8, &H6: DEF SEG = SB: BLOAD LD$ + "BRAKE.RLE", 53248!: DEF SEG: PR(0) = 6: PR(1) = SB: PR(2) = -1: PR(3) = -12288: CALL CA!(PR(0))
 1205 RP! = VARPTR(KF(0)): QF = RP! + 65536! * (RP! > 32767)
-1206 OUT &H3D8, &HE: LOCATE 3, 21 - LEN(SN$(LV)) \ 2: PRINT SN$(LV);: M$ = "POWERED DESCENT": GOSUB 1250: OX = -1: J = -1: PN = 0: T0! = TIMER
+1206 GOSUB 8950: LOCATE 3, 21 - LEN(SN$(LV)) \ 2: PRINT SN$(LV);: M$ = "POWERED DESCENT": GOSUB 1250: OX = -1: J = -1: PN = 0: T0! = TIMER
 1210 RP! = (TIMER - T0!) / 5: IF RP! > 1 OR INKEY$ <> "" THEN 1240
 1212 XI = 12 + INT(210 * (1 - (1 - RP!) ^ 2)): YI = 40 + INT(36 * RP! * RP!): K = 0: IF RP! > .5 THEN K = INT((RP! - .5) * 8) + 1: IF K > 3 THEN K = 3
 1214 IF K <> J THEN J = K: GOSUB 1230
@@ -276,7 +278,7 @@
 4478 LOCATE 5, 15: PRINT "PRESS ENTER";: PLAY "T90O2L4GE-C2"
 4479 GOTO 4430
 4600 REM ---- end-of-level picture PC$ (LANDED, WRECK or CRATER), loaded with the display off ----
-4610 OUT &H3D8, &H6: DEF SEG = &HB800: BLOAD LD$ + PC$, 0: DEF SEG: OUT &H3D8, &HE: RETURN
+4610 OUT &H3D8, &H6: DEF SEG = &HB800: BLOAD LD$ + PC$, 0: DEF SEG: GOSUB 8950: RETURN
 4700 REM ---- life on the end-of-level picture: IM 1 landed, 2 wreck, 3 crater ----
 4702 IF IM = 0 THEN RETURN ELSE IF TIMER < TW! THEN RETURN
 4704 TW! = TIMER + .15: TK = TK + 1: ON IM GOSUB 4710, 4720, 4740: RETURN
@@ -293,11 +295,11 @@
 4748 QC(J) = POINT(QX(J), QY(J)): PSET (QX(J), QY(J)), 3: NEXT J: RETURN
 4800 REM ==== success: the last seconds of the descent replayed out of the commander's window ====
 4802 REM CKPIT.BIN draws the window: PR(2) altitude, PR(3) drift, PR(4) dust 0-3, PR(5) jolt
-4805 OUT &H3D8, &H6: DEF SEG = &HB800: BLOAD LD$ + "COCKPIT.PIC", 0: DEF SEG: IF CS = 0 THEN OUT &H3D8, &HE: RETURN
+4805 OUT &H3D8, &H6: DEF SEG = &HB800: BLOAD LD$ + "COCKPIT.PIC", 0: DEF SEG: IF CS = 0 THEN GOSUB 8950: RETURN
 4807 DEF SEG = CS: BLOAD LD$ + "CK" + CHR$(48 + LV) + ".DAT", 0: DEF SEG
 4810 PR(1) = CS: PR(0) = 2: CALL CA!(PR(0)): PR(0) = 1: NS = NR: IF NS > 25 THEN NS = 25
 4812 RO = (RI - NS + 26) MOD 25: XF = RD(RI): PN = 0: CL = 0: PR(5) = 0: I = 0: GOSUB 4840: PR(2) = Z: PR(3) = XD: CALL CA!(PR(0))
-4814 LOCATE 17, 10: PRINT "DESCENT";: GOSUB 4870: GOSUB 4880: GOSUB 4885: OUT &H3D8, &HE
+4814 LOCATE 17, 10: PRINT "DESCENT";: GOSUB 4870: GOSUB 4880: GOSUB 4885: GOSUB 8950
 4816 IF INKEY$ <> "" THEN 4816 ELSE T0! = TIMER
 4820 RP! = (TIMER - T0!) * 2.5: I = INT(RP!): IF I >= NS - 1 THEN 4860 ELSE IF I <> OI THEN GOSUB 4840
 4825 RP! = RP! - I: PR(2) = Z + DA * RP!: PR(3) = XD + DD * RP!: CALL CA!(PR(0)): IF INKEY$ = "" THEN 4820 ELSE 4860
@@ -445,11 +447,13 @@
 7970 GY = FY - 38: IF GY < 18 THEN GY = 18 ELSE IF GY > 144 THEN GY = 144
 7980 GET (GX, GY)-(GX + 63, GY + 55), FB: RETURN
 8000 REM ==== mission complete: high score check, initials, save, show table ====
+8005 IF LD$ = "A:" THEN P$ = "INSERT THE START DISK": GOSUB 8900: REM one drive: the scores live on the START disk
 8010 GOSUB 8100: HR = 0
 8020 IF TS! > HS!(10) THEN GOSUB 8400
 8030 GOSUB 8500: LOCATE 20, 14: PRINT "PRESS ANY KEY";
 8035 IF HR > 0 AND HE THEN LOCATE 21, 12: PRINT "(DISK ERROR: NOT SAVED)";
 8040 IF INKEY$ = "" THEN 8040
+8045 IF LD$ = "A:" THEN P$ = "INSERT THE LUNAR LANDING DISK": GOSUB 8900
 8050 GOTO 200
 8100 REM ---- load the high score table (empty until the first scores are saved in LANDHS.DAT) ----
 8110 HE = 0: ON ERROR GOTO 8180
@@ -493,8 +497,24 @@
 8700 RESTORE 9110: RETURN
 8710 RESTORE 9130: RETURN
 8720 RESTORE 9150: RETURN
-8800 RESUME 8810: REM MOON is not on this disk (level run on its own): back to DOS
+8800 IF LD$ = "A:" THEN RESUME 8805 ELSE RESUME 8810: REM MOON not found: one drive asks for the START disk, else back to DOS
+8805 P$ = "START DISK NOT FOUND": GOSUB 8900: ON ERROR GOTO 8800: CHAIN "MOON"
 8810 SCREEN 0, 0: WIDTH 80: SYSTEM
+8890 REM ---- one drive: ask for disk P$ in drive A: ----
+8900 LINE (16, 60)-(303, 107), 0, BF: LINE (16, 60)-(303, 107), 2, B: LOCATE 10, 21 - LEN(P$) \ 2: PRINT P$;: LOCATE 12, 7: PRINT "IN DRIVE A: AND PRESS A KEY";
+8905 SOUND 200, 3: IF INKEY$ <> "" THEN 8905
+8910 IF INKEY$ = "" THEN 8910
+8915 RETURN
+8940 REM ---- display on, palette cyan / red / grey (CGA: the mode register's B/W bit). A Tandy 1000 picks palette registers 3, 4, 7 for that, so open its palette mask (it masks them to 0-3) and set them ----
+8950 OUT &H3D8, &HE: OUT &H3D9, 0: IF TY = 0 THEN RETURN
+8952 I = INP(&H3DA): OUT &H3DA, 1: OUT &H3DE, &HF: OUT &H3DA, &H10: OUT &H3DE, 0: OUT &H3DA, &H13: OUT &H3DE, 3: OUT &H3DA, &H14: OUT &H3DE, 4: OUT &H3DA, &H17: OUT &H3DE, 7: RETURN
+8958 REM ---- before CHAIN: erase the arrays, newest first. CHAIN otherwise drops every non-COMMON variable one at a time, shifting all the arrays each time (minutes on an XT) ----
+8960 ERASE RH, RV, KB, KF, KM, KS, BK, MC, EY, EX, EB, QC, QY, QX, TC, TY
+8961 ERASE TX, SG, CG, CMK, CMS, D6, D5, D4, D3, D2, D1, ZH, ZW, ZY, ZX, HL$
+8962 ERASE HS!, HN$, SA, SD$, SN$, RY!, RX!, LM, LB, LA, EV, EU, M7, M6, M5, M4
+8963 ERASE M3, M2, M1, C7, C6, C5, C4, C3, C2, C1, FB, B2, Q9, Q7, Q6, Q4
+8964 ERASE Q3, Q2, Q1, F3, F2, F1, BG, MK, SP, H, RT, RD, RA, PR
+8965 RETURN
 9000 REM ---- thrusters: push x, push y for keys 1-9 (5 and 8 are throttle) ----
 9010 DATA -.707,.707, 0,1, .707,.707, -1,0, 0,0, 1,0, -.707,-.707, 0,0, .707,-.707
 9055 REM ---- landing sites: name, description, available? ----

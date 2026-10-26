@@ -19,6 +19,8 @@ Both disks work as real 360K floppies in two drives, or with a Gotek as B:. To m
 ## Playing
 Boot from the START floppy in A: with the LUNAR LANDING disk in B:. The game starts on its own (fast mode is switched on for a Laser XT). After EXIT TO DOS, `GO` starts it again.
 
+One floppy drive is fine too: the game notices (BIOS equipment word) and asks you to swap disks in A: when it needs the other one, going into the landing, to save a high score, and going back to the menu. On a Tandy 1000 the game sets the Tandy's own palette registers so the colors match the CGA (cyan, red, grey).
+
 The title plays an Earthrise to *Also sprach Zarathustra*, then shows the high scores. Any key goes to the mission menu. If the level disk isn't in B:, the menu asks for it instead of stopping.
 
 **Orbit (choose a site).** The Moon's horizon is split into three zones: Tranquility (Easy), Fra Mauro (Medium), Hadley Rille (Hard). 4/6 or the arrow keys drift left and right (no fuel used, no points). 2, down arrow or Enter fires the descent. Esc returns to the menu.
@@ -92,6 +94,7 @@ Needs Python 3 (numpy, Pillow), mtools, PC-BASIC (`pip install pcbasic`, used to
 - The disks carry tokenized programs: they load about 3x faster on an 8088 than plain text.
 - Missions are separate programs started from the menu with `CHAIN` from the drive in `LD$` (B:). `COMMON` passes `SK%` (skip the intro on return), `LS%` (landing site chosen, for the future surface mission) and `LD$`. LANDER creates all three at its start too, so they exist even when it is run on its own.
 - Create every simple variable before any `BLOAD ... VARPTR`, so arrays don't move under a load. This matters even more for `CKPIT.BIN`: it lives in an array, and if a new variable appears later the array moves and `CALL` jumps into the wrong place.
+- Before `CHAIN`, LANDER erases its arrays (newest first). Otherwise `CHAIN` drops each non-COMMON variable one at a time, shifting every array each time, which took minutes on an XT.
 - GW-BASIC looks variables up in the order they were created, so the ones a tight loop uses are created first (line 55 for the cockpit replay).
 - Two 64K blocks are asked from DOS (`CKPIT.BIN` mode 0) and handed back before `CHAIN` (mode 3): one for the cockpit scenery, one holding the site and its two danger screens with their maps (slots at 0000h, 4000h, 8000h; maps at C000h + slot x 500h; packed files land at D000h). The site's screens load once; a lander after a crash starts from memory, and the side flips are instant.
 - Danger screens and the cutscene are RLE-packed (`FEh n v` = n copies of v). Dithered ground packs to about 3K a screen.
