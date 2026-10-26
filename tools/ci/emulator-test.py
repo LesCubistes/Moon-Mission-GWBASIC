@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import time
 from PIL import Image, ImageGrab, ImageOps
@@ -17,6 +18,16 @@ a = p.parse_args()
 root = Path(__file__).resolve().parents[2]
 out = root / 'build/ci' / f'{a.machine}-{a.cycles}'
 out.mkdir(parents=True, exist_ok=True)
+# Extract each built image into isolated floppy-directory mounts. Classic DOSBox's
+# FAT image path is distinct from its directory path; this journey tests game files,
+# while mtools checks the built filesystem. Boot/BIOS tests remain separate.
+drives = root / 'build/ci-drives' / f'{a.machine}-{a.cycles}'
+if drives.exists():
+    shutil.rmtree(drives)
+for image, directory in [('START.IMG', 'start'), ('LANDING.IMG', 'landing')]:
+    target = drives / directory
+    target.mkdir(parents=True)
+    subprocess.run(['mcopy', '-s', '-i', str(root / 'disks' / image), '::/*', str(target)], check=True)
 env = dict(os.environ, SDL_AUDIODRIVER='dummy')
 conf = out / 'dosbox.conf'
 conf.write_text(f'''[sdl]
@@ -34,13 +45,15 @@ scaler=normal2x
 [sblaster]
 sbtype=none
 [autoexec]
-imgmount a "{root}/disks/START.IMG" -t floppy
-imgmount b "{root}/disks/LANDING.IMG" -t floppy
+mount a "{drives}/start" -t floppy
+mount b "{drives}/landing" -t floppy
 a:
 gwbasic moon
 exit
 ''')
 checks = []
+success = False
+failure = None
 log = (out / 'emulator.log').open('w')
 proc = subprocess.Popen(['dosbox', '-conf', str(conf), '-noconsole'], env=env, stdout=log, stderr=log)
 window = None
@@ -61,6 +74,7 @@ def screenshot(label):
     from PIL import ImageChops
     bright = ImageChops.lighter(ImageChops.lighter(channels[0], channels[1]), channels[2])
     gray = bright.point(lambda x: 0 if x > 80 else 255)
+    full_gray = gray
     regions = {'title': (0, 0, 1, .4), 'menu': (.225, .74, .775, .99),
                'return-menu': (.225, .74, .775, .99),
                'orbit': (0, 0, 1, .09), 'return-orbit': (0, 0, 1, .09),
@@ -73,6 +87,11 @@ def screenshot(label):
     gray.save(out / 'ocr.png')
     result = subprocess.run(['tesseract', str(out / 'ocr.png'), 'stdout', '--psm', '6'], capture_output=True, text=True, check=True)
     text = result.stdout.upper()
+    errors = ImageOps.expand(full_gray.crop((0, int(full_gray.height * .7), full_gray.width, full_gray.height)), border=40, fill=255)
+    errors.save(out / 'error-ocr.png')
+    diagnostic = subprocess.run(['tesseract', str(out / 'error-ocr.png'), 'stdout', '--psm', '6'], capture_output=True, text=True, check=True).stdout.upper()
+    (out / f'{label}-diagnostics.txt').write_text(diagnostic)
+    text += '\n' + diagnostic
     (out / f'{label}.txt').write_text(text)
     normalized = re.sub(r'[^A-Z0-9]', '', text)
     if label == 'title':
@@ -97,16 +116,22 @@ def contains(text, expected):
 
 def wait_for(label, patterns, timeout=100):
     end = time.monotonic() + timeout
+    matched = False
     while time.monotonic() < end:
         if proc.poll() is not None:
             raise AssertionError(f'Emulator exited before {label}: {proc.returncode}')
         text = screenshot(label)
-        if any(re.search(x, text) for x in ['SYNTAXERROR', 'ILLEGALFUNCTION', 'OUTOFMEMORY', 'FILENOTFOUND', 'UNDEFINEDLINE']):
+        if any(re.search(x, text) for x in ['SYNTAXERROR', 'ILLEGALFUNCTION', 'OUTOFMEMORY', 'OUTOFDATA', 'FILENOTFOUND', 'UNDEFINEDLINE']):
             raise AssertionError(f'BASIC error during {label}: {text}')
         if all(contains(text, pattern) for pattern in patterns):
+            if not matched:
+                matched = True
+                time.sleep(1)
+                continue
             checks.append(label)
             print(f'PASS {a.machine}/{a.cycles}: {label}', flush=True)
             return
+        matched = False
         time.sleep(1)
     raise AssertionError(f'Timed out waiting for {label}; see screenshot and OCR text')
 
@@ -125,11 +150,11 @@ try:
     key('Return')
     wait_for('orbit', ['SELECTLANDINGSITE', 'DESCEND'])
     key('Return')
-    wait_for('flight', ['FUEL', 'LANDER'])
+    wait_for('flight', ['ALT', 'LANDER', 'THR'])
     # An unpowered descent must reach the crash/report path rather than hang.
     wait_for('crash', ['LANDERSLEFT', 'ENTER'], timeout=120)
     key('Return')
-    wait_for('retry', ['FUEL', 'LANDER'])
+    wait_for('retry', ['ALT', 'LANDER', 'THR'])
     key('Escape')
     wait_for('return-orbit', ['SELECTLANDINGSITE'])
     key('Escape')
@@ -142,6 +167,10 @@ try:
     if proc.returncode != 0:
         raise AssertionError(f'Unexpected emulator exit: {proc.returncode}')
     checks.append('exit')
+    success = True
+except Exception as error:
+    failure = str(error)
+    raise
 finally:
     if proc.poll() is None:
         proc.terminate()
@@ -151,4 +180,4 @@ finally:
             proc.kill()
             proc.wait()
     log.close()
-    (out / 'results.json').write_text(json.dumps({'machine': a.machine, 'cycles': a.cycles, 'passed': checks}, indent=2) + '\n')
+    (out / 'results.json').write_text(json.dumps({'machine': a.machine, 'cycles': a.cycles, 'success': success, 'failure': failure, 'passed': checks}, indent=2) + '\n')
