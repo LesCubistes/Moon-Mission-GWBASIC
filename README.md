@@ -137,3 +137,22 @@ The emulated journey is a functional smoke test. Successful soft landing/cockpit
 Ryan (`LesCubistes`) triggers **Ryan prepares a release** manually in Actions and supplies a version such as `v0.1.0`. The workflow reruns the whole matrix, then creates a **draft** release for him to review and publish. There is no automatic release on pushes or tags. Its ZIP contains tokenized BASIC, art, sources, checksums and two 360K **game-only data images**; DOS and the BASIC interpreter are excluded. These data images do not boot by themselves. Runtime-containing test disks are not uploaded as release artifacts.
 
 GW-BASIC is interpreted: tokenization and disk packaging are sufficient for the current distribution. `asm/ckpit.asm` is already compiled 8086 code and can be rebuilt with NASM. A conversion to an EXE/COM compiler would need its own compatibility work around `CHAIN`/`COMMON`, floating-point physics, graphics and the `VARPTR`/`CALL` interface; it is not a prerequisite for releasing this version.
+
+## DualSense through Steam Input
+
+The desktop shortcut has a saved DualSense keyboard layout. `config/steam/dualsense.vdf` preserves the native layout for review/sharing; `tools/setup-steam-input.py --appid YOUR_SHORTCUT_ID` applies it to a connected DualSense using the local Steam CEF endpoint (`127.0.0.1:8080`). That endpoint must already be enabled; the script does not expose it or change global controller settings. It backs up the previous configuration under ignored `build/steam-input`, saves the native Steam configuration and verifies each binding by reading it back. Other installations need to install/import the layout once; this does not silently install a global default on other people's Steam accounts.
+
+| Control | Mapping |
+| --- | --- |
+| Left stick left/right | 4/6, lateral thrust |
+| Left stick up/down | 8/5, increase/decrease main throttle |
+| D-pad | Arrow keys for menus and orbit |
+| Cross | Enter, confirm/descent/next lander |
+| Circle / Options | Escape, return/back |
+| Square | Space, engine off |
+| Triangle | 2, downward thruster |
+| R2 / R1 | 8, increase main throttle |
+| L2 / L1 | 5, decrease main throttle |
+| Create | Enter |
+
+Mappings send plain number keys, so NumLock is not required. This is a digital keyboard layout, not proportional analog control or a new DOS joystick driver. Binding readback is automated; physical controller response and flight feel still need a play check. Fine diagonal thrusters remain available on the original keyboard.
