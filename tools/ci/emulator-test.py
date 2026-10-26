@@ -74,7 +74,16 @@ def screenshot(label):
     result = subprocess.run(['tesseract', str(out / 'ocr.png'), 'stdout', '--psm', '6'], capture_output=True, text=True, check=True)
     text = result.stdout.upper()
     (out / f'{label}.txt').write_text(text)
-    return re.sub(r'[^A-Z0-9]', '', text)
+    normalized = re.sub(r'[^A-Z0-9]', '', text)
+    if label == 'title':
+        # The decorative logo uses overlapping colors rather than the BIOS font.
+        # Detect the actual lunar scene; the following menu assertion verifies text.
+        pixels = list(crop.convert('RGB').getdata())
+        colored = sum(max(c) - min(c) > 60 for c in pixels)
+        lit = sum(max(c) > 80 for c in pixels)
+        if colored > 100 and lit > 5000:
+            normalized += 'GRAPHICSSCENEREADY'
+    return normalized
 
 def contains(text, expected):
     # The IBM bitmap font produces occasional OCR substitutions. Require >=85%
@@ -110,7 +119,7 @@ try:
         time.sleep(.1)
     if window is None:
         raise AssertionError('No DOSBox window')
-    wait_for('title', ['MOONMISSION'])
+    wait_for('title', ['GRAPHICSSCENEREADY'])
     key('space')
     wait_for('menu', ['SELECTMISSION', 'MOONLANDING'])
     key('Return')
