@@ -114,9 +114,10 @@ def contains(text, expected):
     return False
 
 
-def wait_for(label, patterns, timeout=100):
+def wait_for(label, patterns, timeout=100, leave_orbit=False):
     end = time.monotonic() + timeout
     matched = False
+    next_back = time.monotonic() + 3
     while time.monotonic() < end:
         if proc.poll() is not None:
             raise AssertionError(f'Emulator exited before {label}: {proc.returncode}')
@@ -132,6 +133,13 @@ def wait_for(label, patterns, timeout=100):
             print(f'PASS {a.machine}/{a.cycles}: {label}', flush=True)
             return
         matched = False
+        if leave_orbit and time.monotonic() >= next_back:
+            # Orbit drains keys buffered while loading. Retry only when its
+            # header is still visible, never blindly send Escape at a menu.
+            header = screenshot('return-orbit')
+            if contains(header, 'SELECTLANDINGSITE'):
+                key('Escape')
+            next_back = time.monotonic() + 3
         time.sleep(1)
     raise AssertionError(f'Timed out waiting for {label}; see screenshot and OCR text')
 
@@ -158,7 +166,7 @@ try:
     key('Escape')
     wait_for('return-orbit', ['SELECTLANDINGSITE'])
     key('Escape')
-    wait_for('return-menu', ['SELECTMISSION'])
+    wait_for('return-menu', ['SELECTMISSION'], leave_orbit=True)
     key('Escape')
     try:
         proc.wait(timeout=20)
