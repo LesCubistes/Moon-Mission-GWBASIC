@@ -1,6 +1,6 @@
 # Moon Mission (GW-BASIC)
 
-A space game written in GW-BASIC for a VTech Laser XT (8088, CGA), played from a real floppy in A: and a Gotek floppy emulator in B:.
+By Ryan Barrineau. A space game written in GW-BASIC for a VTech Laser XT (8088, CGA), played from a real floppy in A: and a Gotek floppy emulator in B:.
 
 ![Title sequence](earthrise_preview.gif)
 
@@ -21,11 +21,15 @@ Boot from the START floppy in A: with the LUNAR LANDING disk in B:. The game sta
 
 One floppy drive is fine too: the game notices (BIOS equipment word) and asks you to swap disks in A: when it needs the other one, going into the landing, to save a high score, and going back to the menu. On a Tandy 1000 the game sets the Tandy's own palette registers so the colors match the CGA (cyan, red, grey).
 
-The title plays an Earthrise to *Also sprach Zarathustra*, then shows the high scores. Any key goes to the mission menu. If the level disk isn't in B:, the menu asks for it instead of stopping.
+The title plays an Earthrise to *Also sprach Zarathustra*: the Moon's surface rolls toward you while the Earth climbs over the horizon, then MOON MISSION and "by Ryan Barrineau" appear. The ground keeps rolling under the menu. After the music it shows the high scores. Any key goes to the mission menu. If the level disk isn't in B:, the menu asks for it instead of stopping.
+
+Anything slow shows LOADING... (starting up, loading the mission, the braking burn, a new landing site, going back to the title), and keys pressed during a load are thrown away, so a stray press can't skip the braking burn, fire a thruster or pick a menu item.
+
+**Mission briefing.** Starting Moon Landing shows three pages before the landing site screen: the goal and the keyboard, the gamepad and how to read the gauges, then a safe landing, scoring and the three sites. Any key turns the page; Esc skips the rest. It shows each time the mission is started from the menu.
 
 **Orbit (choose a site).** The Moon's horizon is split into three zones: Tranquility (Easy), Fra Mauro (Medium), Hadley Rille (Hard). 4/6 or the arrow keys drift left and right (no fuel used, no points). 2, down arrow or Enter fires the descent. Esc returns to the menu.
 
-**Braking burn.** A short hands-off cutscene: zoomed far out, the small lander flies over the Moon engine-first to slow down (POWERED DESCENT), swings upright (PITCHOVER) and heads for the site marked on the limb (APPROACH PHASE). No fuel used. Any key skips it.
+**Braking burn.** A short hands-off cutscene: zoomed far out, the small lander flies over the Moon engine-first to slow down (POWERED DESCENT), swings upright (PITCHOVER) and heads for the site marked on the limb (APPROACH PHASE). No fuel used. Any key skips it (keys pressed while it loads don't count).
 
 **Landing (keypad, NumLock on).**
 
@@ -33,12 +37,18 @@ The title plays an Earthrise to *Also sprach Zarathustra*, then shows the high s
 |---|---|
 | 8 / 5 (or grey + / -) | Main engine throttle up / down, 10% a press |
 | 0 or Space | Main engine off |
-| 7 9 4 6 1 2 3 | Maneuvering thrusters (hold for a steady burn) |
+| 4 6 | Push left / right |
+| 7 9 | Lift up-left / up-right |
+| 1 2 3 | Push down |
 | Esc | Back to orbit |
+
+The arrow keys and the keypad with NumLock off work the same as the number keys.
+
+**The gauges.** The top line shows the fuel bar, LANDER n/3 and the mission time. Under it: **ALT** height above the ground, **H** sideways speed (+1.5 means moving right), **V** up/down speed (-3.2 means moving down) and **THR** engine power in percent.
 
 No walls at the top or sides. Climb off the top and the lander hides while a marker on the top edge shows where it is (the HUD keeps the altitude); gravity brings it back, and fuel limits how far you can go. Fly off the left or right edge and the screen flips to danger ground on that side: boulders, crevasses and steep slopes with nowhere safe to land, ending in a natural wall (a crater rim, a ridge, Mount Hadley's flank). Fly back to return to the site.
 
-Land on a flat patch slowly and nearly level. Touching down too fast, drifting, landing on a slope or flying into terrain all crash, in five different ways (hard landing, impact, tipping over, sliding off a rim, and a rare runaway thruster).
+Land on a flat patch slowly and nearly level: V no faster than -4.0, H within 2.0, and both feet on level ground. Touching down too fast, drifting, landing on a slope or flying into terrain all crash, in five different ways (hard landing, impact, tipping over, sliding off a rim, and a rare runaway thruster).
 
 ## Scoring
 Each level gives 3 landers. A crash with landers left shows a short report and the next lander starts. Losing all three ends the level with a picture: the wreck (last one crashed) or a crater (last one exploded).
@@ -62,15 +72,21 @@ A fast pilot does best on the far, high-paying pad; a slower one often scores mo
 ## Files
 | File | What it is |
 |---|---|
-| `src/MOON.BAS` | START disk: title (Earthrise, music, twinkling stars, shooting stars), high scores, mission menu |
-| `src/LANDER.BAS` | Moon Landing: orbit site selection, landing physics, crashes, scoring, high score entry, end pictures |
+| `src/MOON.BAS` | START disk: title (Earthrise over a rolling moonscape, music, twinkling stars, shooting stars), high scores, mission menu, gamepad setup |
+| `src/LANDER.BAS` | Moon Landing: mission briefing, orbit site selection, braking burn, landing physics, crashes, scoring, high score entry, end pictures |
 | `src/MOONPAL.BAS` | CGA palette test scene (not on the disks) |
 | `assets/*.PIC` | `BLOAD` images of CGA video RAM: title moon, orbit, the three landing sites, landed / wreck / crater pictures |
 | `assets/*.MAP` | Collision maps for each site: ground height per column, and the highest ground under the lander's footprint |
-| `assets/*.SPR` | `GET`/`PUT` sprites: lander and mask, engine flames, thruster puffs, crash poses, dust plumes, Earth, title |
+| `assets/*.SPR` | `GET`/`PUT` sprites: lander and mask, engine flames, thruster puffs, crash poses, dust plumes, Earth, title, the "by Ryan Barrineau" credit (`CREDIT.SPR`) |
+| `assets/ROLL.DAT`, `assets/ROLL.BIN` | The title's rolling moonscape: the pre-drawn ground in 10 depth bands, the skyline masks and the Earth (`ROLL.DAT`, 54K), and the routine that draws each frame (`ROLL.BIN`). START disk |
+| `assets/BRIEF1.RLE` .. `BRIEF3.RLE` | The three mission briefing pages. LANDING disk |
+| `assets/fonts/` | Dancing Script (SIL Open Font License, `OFL.txt`), the script used for the credit |
 | `asm/laserchk.asm` | `LASERCHK.COM`: exits with ERRORLEVEL 1 on a Laser XT (looks for "Central Point" in the BIOS ROM) |
 | `tools/mkdisk.sh` | Builds `START.IMG` and `LANDING.IMG` (needs your own DOS disk, GW-BASIC and SPEED.COM in `dos/`) |
-| `tools/mkart.py`, `tools/earth.py` | Title art: cratered moon, starfield, title, the lit Earth from real coastline data (`pip install global-land-mask`) |
+| `tools/mkart.py`, `tools/earth.py` | Title art: cratered moon with a gently curved horizon, starfield, title, the "by Ryan Barrineau" credit, the lit Earth from real coastline data (`pip install global-land-mask`) |
+| `tools/mkrollmoon.py` | The rolling moonscape: `ROLL.DAT` and `ROLL.BIN` (assembles `asm/roll.asm` with NASM). Given a GIF name it also writes a preview drawn by a Python copy of the machine code |
+| `asm/roll.asm` | `ROLL.BIN`, the 8086 routine MOON `CALL`s once per clock tick: moves the ground one step toward the viewer, draws the rising Earth, keeps the stars and leaves the menu box and pad hints alone |
+| `tools/mkbrief.py` | The mission briefing pages, drawn with the CGA font (from PC-BASIC) and the game's own lander sprites |
 | `tools/mklevel.py`, `tools/mksites.py` | Tranquility, and Fra Mauro / Hadley Rille terrain, pads and collision maps; lander, flame and crash sprites |
 | `tools/mkorbit.py` | The orbit screen |
 | `tools/mkbrake.py` | The braking burn cutscene: `BRAKE.RLE` (scene) and `BRAKE.SPR` (small lander in four poses, each with mask and flame) |
@@ -85,7 +101,7 @@ A fast pilot does best on the far, high-paying pad; a slower one often scores mo
 | `docs/design/` | Design mockups made along the way |
 
 ## Building
-Needs Python 3 (numpy, Pillow), mtools, PC-BASIC (`pip install pcbasic`, used to tokenize the programs) and NASM to rebuild `asm/ckpit.asm` (`nasm -f bin asm/ckpit.asm -o build/ckpit.bin`, then `tools/mkckpit.py assets build/ckpit.bin`; add `--preview` for GIFs of each site). Put your own `DISK01.IMG` (MS-DOS 3.30 disk 1), `GWBASIC.EXE` and the Laser XT `SPEED.COM` in `dos/`, then run `tools/mkdisk.sh`. The images land in `disks/`.
+Needs Python 3 (numpy, Pillow), mtools, PC-BASIC (`pip install pcbasic`, used to tokenize the programs and for the briefing font) and NASM to rebuild `asm/ckpit.asm` (`nasm -f bin asm/ckpit.asm -o build/ckpit.bin`, then `tools/mkckpit.py assets build/ckpit.bin`; add `--preview` for GIFs of each site). After changing the title art, rebuild the rolling ground with `tools/mkrollmoon.py assets` (add a GIF name for a preview). After changing the lander sprites or the briefing text, run `tools/mkbrief.py assets assets`. Put your own `DISK01.IMG` (MS-DOS 3.30 disk 1), `GWBASIC.EXE` and the Laser XT `SPEED.COM` in `dos/`, then run `tools/mkdisk.sh`. The images land in `disks/`.
 
 ## Conventions
 - Graphics: `SCREEN 1`, palette cyan / red / grey (`OUT &H3D8,&HE : OUT &H3D9,0`).
@@ -105,6 +121,9 @@ Needs Python 3 (numpy, Pillow), mtools, PC-BASIC (`pip install pcbasic`, used to
 - Every BASIC statement costs real time at 4.77 MHz (an extra line checked each frame is noticeable). Per-frame work stays minimal; ambient effects run on a one-second tick.
 - Moving things are drawn so they never smear the scene: the lander saves and restores the area under it with `GET`/`PUT`; dust is `PUT ... XOR` (drawing twice restores the ground); the module overhead and the shadow keep a copy of what they cover.
 - Load screens with the display switched off (`OUT &H3D8,&H6`) and turn it back on when drawn.
+- Anything that takes more than a moment shows LOADING... first, and the keyboard is emptied after it (`IF INKEY$ <> "" THEN` the same line), so keys pressed during the load don't act.
+- MOON asks DOS for one 64K block for the rolling ground (`ROLL.BIN` mode 0) and gives it back before `CHAIN` and on exit (mode 3), so LANDER still gets its two blocks. Without the memory the title Moon just stands still.
+- `TIMER` counts seconds since midnight (up to 86400). Check a `TIMER` difference is small before multiplying it into an integer variable, or it overflows.
 - Feed background music with small `PLAY` chunks; a full queue makes `PLAY` block.
 
 MS-DOS, GW-BASIC and SPEED.COM are not included.
@@ -118,7 +137,7 @@ The launcher stages editable sources and art into ignored `build/desktop/start` 
 
 The baseline floppy build uses PC-BASIC 2.0.8 for tokenization (`build/venv`) and the existing Tandy DOS system image. Its local copy in `dos/DISK01.IMG` has BASIC.EXE, LIB.EXE and LINK.EXE removed to make room; the original Tandy system image is unchanged. Run `PATH="$PWD/build/venv/bin:$PATH" bash tools/mkdisk.sh`. Built 360K START and LANDING images have also been copied to the Tandy collection as `usb/DSKA0023.IMG` and `usb/DSKA0024.IMG`.
 
-These remain the original **two-drive** game layout. Single-drive swapping, Tandy hardware palette handling and physical Laser XT/Tandy verification are pending. DOSBox emulation is an initial check, not proof of hardware compatibility.
+Single-drive disk swapping and the Tandy palette are in, and the game has been played on a real Laser XT and a Tandy 1000 (two drives, one drive, the gamepad). DOSBox emulation is an initial check, not proof of hardware compatibility.
 
 ## Automated compatibility checks and releases
 
@@ -135,7 +154,7 @@ docker run --init --rm -v "$PWD:/workspace" moon-ci bash -euc '
 '
 ```
 
-The emulated journey is a functional smoke test of the image contents. It does not boot DOS or validate a BIOS floppy controller. Direct image mounts in the classic Ubuntu DOSBox runner truncated mission reads in testing; directory mounts of the exact extracted files avoid that emulator path. Real disk-image boot/read tests remain separate. Successful soft landing/cockpit replay, all three terrain routes, high-score persistence, PCjr/Tandy memory limits, exact palettes, audio quality and single-drive swaps still need dedicated tests and real-hardware sign-off. Palette and disk-swap changes belong to Ryan's separate work.
+The emulated journey is a functional smoke test of the image contents. It does not boot DOS or validate a BIOS floppy controller. Direct image mounts in the classic Ubuntu DOSBox runner truncated mission reads in testing; directory mounts of the exact extracted files avoid that emulator path. Real disk-image boot/read tests remain separate. Successful soft landing/cockpit replay, all three terrain routes, high-score persistence, PCjr/Tandy memory limits, exact palettes, audio quality and single-drive swaps still need dedicated tests and real-hardware sign-off.
 
 Ryan (`LesCubistes`) triggers **Ryan prepares a release** manually in Actions and supplies a version such as `v0.1.0`. The workflow reruns the whole matrix, then creates a **draft** release for him to review and publish. There is no automatic release on pushes or tags. Its ZIP contains tokenized BASIC, art, sources, checksums and two 360K **game-only data images**; DOS and the BASIC interpreter are excluded. These data images do not boot by themselves. Runtime-containing test disks are not uploaded as release artifacts.
 
@@ -163,12 +182,12 @@ Mappings send plain number keys, so NumLock is not required. This is a digital k
 
 ## Native Gravis / standard gameport controls
 
-Press **J** at the mission menu for opt-in three-point calibration: release the direction pad, then hold up-left, then down-right, pressing Enter at each prompt. Calibration is kept through mission/menu CHAIN calls for this session. Press **K** for keyboard-only controls. The keyboard is always available; gameport polling is skipped while disabled and capped at roughly 7 reads/second while enabled. All joystick scalars are created before the existing VARPTR/BLOAD operations.
+Press **J** at the mission menu for opt-in three-point calibration: release the direction pad, then hold up-left, then down-right, pressing Enter at each prompt. The last question is **Hold A to burn? (Y/N)**. With Y, the engine fires only while A is held, at a power you set with up/down on the D-pad (or 8/5 on the keyboard); it starts at 60% and THR shows the setting. With N, each A press adds 10% like the keyboard. The bottom-left corner of the title shows PAD OFF, PAD ON or PAD HOLD. Calibration is kept through mission/menu CHAIN calls for this session. Press **K** for keyboard-only controls. The keyboard is always available; gameport polling is skipped while disabled and capped at roughly 7 reads/second while enabled. All joystick scalars are created before the existing VARPTR/BLOAD operations.
 
 | Control | Menus/orbit | Flight |
 | --- | --- | --- |
-| D-pad | Navigate/select site | Existing keypad directions; up/down adjust main throttle |
-| Red A | Confirm/descent/next | Increase main throttle |
+| D-pad | Navigate/select site | Existing keypad directions; up/down adjust main throttle (hold mode: set the burn power) |
+| Red A | Confirm/descent/next | Increase main throttle (hold mode: burn while held) |
 | Blue B | Back | Decrease main throttle |
 | Yellow C | Space | Engine off |
 | Green D | Back | Return to orbit |
