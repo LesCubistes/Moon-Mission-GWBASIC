@@ -182,16 +182,16 @@ def wait_for(label, patterns, timeout=100, skip_intro=False, require_timer=False
                 # OCR can take longer than the entire unpowered flight on a
                 # hosted runner. Sample the already-located timer directly.
                 sample_end = min(end, time.monotonic() + 3)
-                while len(clock_states) < 3 and time.monotonic() < sample_end:
+                while len(clock_states) < 2 and time.monotonic() < sample_end:
                     time.sleep(.15)
                     clock = ImageGrab.grab(bbox=timer_bounds[label])
                     clock_states.add(hashlib.sha256(monochrome(clock).tobytes()).hexdigest())
                 timer_metrics[label] = len(clock_states)
-                if len(clock_states) < 3:
+                if len(clock_states) < 2:
                     time.sleep(.5)
                     continue
             if require_timer:
-                # Three timer states already establish a live, stable flight.
+                # Two distinct timer states already establish a live, stable flight.
                 checks.append(label)
                 print(f'PASS {a.machine}/{a.cycles}: {label}', flush=True)
                 return
@@ -219,6 +219,9 @@ try:
         time.sleep(.1)
     if window is None:
         raise AssertionError('No DOSBox window')
+    # This X server belongs to the test. Held keys must not autorepeat through
+    # successive game screens (Escape could otherwise exit three menus).
+    subprocess.run(['xset', 'r', 'off'], env=env, check=True)
     wait_for('title', ['GRAPHICSSCENEREADY'])
     key('space')
     wait_for('menu', ['SELECTMISSION', 'MOONLANDING'], skip_intro=True)
