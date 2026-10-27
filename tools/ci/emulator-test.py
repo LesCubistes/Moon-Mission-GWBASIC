@@ -107,7 +107,7 @@ def key(name, duration=.12):
     time.sleep(duration)
     subprocess.run(['xdotool', 'keyup', name], env=env, check=True)
 
-def screenshot(label):
+def screenshot(label, diagnostics=False):
     image = ImageGrab.grab()
     image.save(out / f'{label}.png')
     # OCR a monochrome copy; evidence always retains the original palette.
@@ -135,11 +135,12 @@ def screenshot(label):
         timer_bounds[label] = (x + int(width * .775), y, x + width, y + int(height * .04))
         clock = crop.crop((int(crop.width * .775), 0, crop.width, int(crop.height * .04)))
         timer_samples[label] = hashlib.sha256(monochrome(clock).tobytes()).hexdigest()
-    errors = monochrome(crop.crop((0, int(crop.height * .7), crop.width, crop.height)))
-    errors.save(out / 'error-ocr.png')
-    diagnostic = subprocess.run(['tesseract', str(out / 'error-ocr.png'), 'stdout', '--psm', '6'], capture_output=True, text=True, check=True).stdout.upper()
-    (out / f'{label}-diagnostics.txt').write_text(diagnostic)
-    text += '\n' + diagnostic
+    if diagnostics:
+        errors = monochrome(crop.crop((0, int(crop.height * .7), crop.width, crop.height)))
+        errors.save(out / 'error-ocr.png')
+        diagnostic = subprocess.run(['tesseract', str(out / 'error-ocr.png'), 'stdout', '--psm', '6'], capture_output=True, text=True, check=True).stdout.upper()
+        (out / f'{label}-diagnostics.txt').write_text(diagnostic)
+        text += '\n' + diagnostic
     (out / f'{label}.txt').write_text(text)
     normalized = re.sub(r'[^A-Z0-9]', '', text)
     if label == 'title':
@@ -208,6 +209,11 @@ def wait_for(label, patterns, timeout=100, skip_intro=False, require_timer=False
             key("space")
             next_skip = time.monotonic() + 2
         time.sleep(1)
+    # Terrain OCR is expensive and unnecessary for a matched HUD. Inspect the
+    # BASIC error area on failure, without consuming the short flight window.
+    text = screenshot(label, diagnostics=True)
+    if any(error in text for error in ['SYNTAXERROR', 'ILLEGALFUNCTION', 'OUTOFMEMORY', 'OUTOFDATA', 'FILENOTFOUND', 'UNDEFINEDLINE']):
+        raise AssertionError(f'BASIC error during {label}: {text}')
     raise AssertionError(f'Timed out waiting for {label}; see screenshot and OCR text')
 
 try:
