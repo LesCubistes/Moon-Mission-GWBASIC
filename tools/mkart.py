@@ -134,7 +134,21 @@ tp[sh & (tp != 3)] = 2
 tp[(tp == 3) & (np.arange(tp.shape[0])[:, None] < tp.shape[0] * 0.38)] = 1
 TW = tp.shape[1] + (-tp.shape[1]) % 4
 tpad = np.zeros((tp.shape[0], TW), np.uint8); tpad[:, :tp.shape[1]] = tp
-TX, TY = (320 - TW) // 2 // 4 * 4, 8
+# the designer's credit above the title, Sid Meier style
+nf = ImageFont.truetype("/usr/share/fonts/truetype/google-fonts/Poppins-BoldItalic.ttf", 12)
+nimg = Image.new("L", (400, 24), 0); nd = ImageDraw.Draw(nimg); cx = 2
+for c in "RYAN BARRINEAU'S":
+    if c == " ": cx += 4; continue
+    b = nf.getbbox(c); nd.text((cx - b[0], 0), c, font=nf, fill=255); cx += b[2] - b[0] + 1
+na = np.asarray(nimg) > 110
+ys_, xs_ = np.nonzero(na); na = na[ys_.min():ys_.max() + 1, xs_.min():xs_.max() + 1]
+na = np.asarray(Image.fromarray(na.astype(np.uint8) * 255).resize((na.shape[1], int(round(na.shape[0] / 1.2))), Image.LANCZOS)) > 110
+both = np.zeros((na.shape[0] + 2 + tpad.shape[0], TW), np.uint8)
+nx = (TW - na.shape[1]) // 2
+both[0:na.shape[0], nx:nx + na.shape[1]][na] = 3
+both[na.shape[0] + 2:] = tpad
+tpad = both
+TX, TY = (320 - TW) // 2 // 4 * 4, 2
 
 # ---------------- writers ----------------
 def cga_bytes(px):
