@@ -122,7 +122,7 @@ These remain the original **two-drive** game layout. Single-drive swapping, Tand
 
 ## Automated compatibility checks and releases
 
-Pull requests and pushes to main run `.github/workflows/compatibility.yml`. The matrix exercises DOSBox's CGA, Tandy and PCjr machine profiles at 300 cycles, plus CGA at 1200 cycles to catch timing assumptions. **CGA is a Laser XT proxy**, not an emulation of its exact motherboard, BIOS or speed utility. The runtime fixture is the existing Tandy system disk in `superterran/tandy1000ex`, pinned by Git revision and SHA-256; it is fetched for tests rather than committed to this project. This tests that interpreter, not every GW-BASIC OEM/version.
+Pull requests and pushes to main run `.github/workflows/compatibility.yml`. The matrix exercises DOSBox's CGA, Tandy and PCjr machine profiles at 300 cycles, plus CGA at 1200 cycles to catch timing assumptions. **CGA is a Laser XT proxy**, not an emulation of its exact motherboard, BIOS or speed utility. The DOS fixture is the existing Tandy system disk in `superterran/tandy1000ex`, pinned by Git revision and SHA-256. Emulator gameplay jobs use generic GW-BASIC 3.22 from a separately checksum-pinned archive fixture; `prepare-runtime.py --basic tandy` retains the original Tandy interpreter for OEM comparisons. The Tandy OEM interpreter produced unusable joystick calibration readings in the classic DOSBox profiles, so native-input tests identify the generic runtime explicitly. These checks do not cover every OEM/version.
 
 Each job builds the original two floppy images, checks the 8086 cockpit assembly against the committed BLOAD payload, and extracts the built images into isolated floppy-directory mounts for keyboard input plus screenshot/OCR assertions for title, mission menu, orbit, descent, unpowered crash, retry, return to orbit/menu and exit. Screenshots, OCR text, emulator logs and a JSON list of reached checkpoints are uploaded even after failure. OCR timeouts fail the job; merely starting DOSBox does not pass it. To run a profile locally:
 
@@ -159,3 +159,28 @@ The desktop shortcut has a saved DualSense keyboard layout. `config/steam/dualse
 | Create | Enter |
 
 Mappings send plain number keys, so NumLock is not required. This is a digital keyboard layout, not proportional analog control or a new DOS joystick driver. Binding readback is automated; physical controller response and flight feel still need a play check. Fine diagonal thrusters remain available on the original keyboard.
+
+
+## Native Gravis / standard gameport controls
+
+Press **J** at the mission menu for opt-in three-point calibration: release the direction pad, then hold up-left, then down-right, pressing Enter at each prompt. Calibration is kept through mission/menu CHAIN calls for this session. Press **K** for keyboard-only controls. The keyboard is always available; gameport polling is skipped while disabled and capped at roughly 7 reads/second while enabled. All joystick scalars are created before the existing VARPTR/BLOAD operations.
+
+| Control | Menus/orbit | Flight |
+| --- | --- | --- |
+| D-pad | Navigate/select site | Existing keypad directions; up/down adjust main throttle |
+| Red A | Confirm/descent/next | Increase main throttle |
+| Blue B | Back | Decrease main throttle |
+| Yellow C | Space | Engine off |
+| Green D | Back | Return to orbit |
+
+Use the Gravis standard four-button mode to expose C/D as joystick B's buttons. A two-button port still permits A/B and directions; use the keyboard for the extra actions. GrIP-only modes are outside this implementation. High-score initials still use the keyboard. Calibration rejection displays the raw readings to help diagnose unsupported ports/runtimes. A DA-15 connector alone does not verify that the Laser XT's interface supports standard PC gameport input.
+
+The test-only SDL shim drives DOSBox's emulated gameport without creating host input devices. Generic GW-BASIC 3.22 calibration, native confirmation, descent, retry and back navigation have been exercised in CGA emulation; physical Gravis/Tandy/Laser hardware verification remains required. This does not resolve the separately reported 256 KB freeze.
+
+## Shared development library
+
+`tools/install-shared-library.py --library /path/to/shared-games/moon-mission --runtime /path/to/GWBASIC.EXE --appid LOCAL_STEAM_SHORTCUT_ID` installs the portable shared launcher and can update an existing local Steam shortcut. The desktop instance is at `/mnt/fast/shared-games/moon-mission`. Omit `--appid` to install only the files and add `desktop-play.sh` through Steam's non-Steam-game UI. Steam IDs and controller bindings remain local.
+
+Each launch fetches **Ryan's main branch** into a separate per-machine Git cache, checksums a complete version in the Syncthing share, then stages it into local emulator state. It does not reset, merge or modify the IDE checkout. An unavailable update falls back to the last complete installed version; this is not a claim that every new development commit is already tested. Scores are retained in the shared game's `saves/` directory across updates. Close the game before playing the same save on another machine so normal Syncthing conflict handling can finish. Only one local session can run at a time.
+
+Requirements are Python 3.12+, Git, DOSBox Staging Flatpak (or native DOSBox), and the user's own compatible BASIC runtime. `current.json` identifies the exact upstream commit. Artwork is copied from upstream `artwork/` and applied on launch when the local Steam CEF endpoint is available; otherwise artwork refresh is deferred and play continues. The existing per-title Steam artwork sync handles cross-machine IDs. This developer channel is separate from Ryan's manually reviewed release packages.

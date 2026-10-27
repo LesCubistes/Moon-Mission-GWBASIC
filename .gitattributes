@@ -1,5 +1,5 @@
 # GW-BASIC needs DOS CRLF line endings; keep game files byte-exact
-*.BAS -text
+*.BAS -text whitespace=cr-at-eol
 *.BAT -text
 *.PIC binary
 *.SPR binary
