@@ -121,7 +121,9 @@ def screenshot(label, diagnostics=False):
                'orbit': (0, 0, 1, .09), 'return-orbit': (0, 0, 1, .09),
                'flight': (0, 0, 1, .12), 'retry': (0, 0, 1, .12),
                'crash': (.2, .3, .8, .55), 'second-crash': (.2, .3, .8, .55),
-               'orbit-right': (0, 0, 1, .09), 'orbit-left': (0, 0, 1, .09)}
+               'orbit-right': (0, 0, 1, .09), 'orbit-left': (0, 0, 1, .09),
+               'first-keypad-right': (0, 0, 1, .09), 'first-arrow-right': (0, 0, 1, .09),
+               'return-keypad-right': (0, 0, 1, .09)}
     left, top, right, bottom = regions.get(label, (0, 0, 1, 1))
     region = crop.crop((int(crop.width * left), int(crop.height * top),
                         int(crop.width * right), int(crop.height * bottom)))
@@ -252,6 +254,12 @@ try:
         wait_for('setup-return', ['SELECTMISSION'])
     confirm()
     wait_for('orbit' , ['SELECTLANDINGSITE', 'DESCEND'])
+    if a.crash_return:
+        # Exercise the physical keypad key separately from an ASCII digit.
+        key('KP_Right')
+        wait_for('first-keypad-right', ['SELECTLANDINGSITE', 'DESCEND'])
+        key('Right')
+        wait_for('first-arrow-right', ['SELECTLANDINGSITE', 'DESCEND'])
     confirm()
     wait_for('flight', ['ALT', 'LANDER', 'THR'], require_timer=True)
     # An unpowered descent must reach the crash/report path rather than hang.
@@ -263,6 +271,8 @@ try:
     back()
     wait_for('return-orbit', ['SELECTLANDINGSITE'])
     if a.crash_return:
+        key('KP_Right')
+        wait_for('return-keypad-right', ['SELECTLANDINGSITE', 'DESCEND'])
         key('6')
         wait_for('orbit-right', ['SELECTLANDINGSITE', 'DESCEND'])
         key('4')
