@@ -35,7 +35,7 @@ def smooth_noise(w, h, scale, seed):
 # horizon: gentle hills on a curved limb, dead flat where Earth comes up
 x = np.arange(320)
 hz = HT - 1 + 3 * np.sin(x / 37.0) + 2 * np.sin(x / 13.0 + 1.3) + 1.5 * np.sin(x / 5.3)
-SAG = 22                     # the Moon curves away: the horizon drops this much at the screen edges
+SAG = 10                     # the Moon curves away: the horizon drops this much at the screen edges
 limb = HT + SAG * ((x - 159.5) / 160.0) ** 2   # smooth, no hills, under the Earth (never above HT)
 hz = hz + limb - HT
 lo, hi = EX - 6, EX + EW + 5
