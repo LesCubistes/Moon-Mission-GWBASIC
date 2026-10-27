@@ -537,9 +537,9 @@
 8890 REM ---- one drive: ask for disk P$ in drive A: ----
 8900 LINE (16, 60)-(303, 107), 0, BF: LINE (16, 60)-(303, 107), 2, B: LOCATE 10, 21 - LEN(P$) \ 2: PRINT P$;: LOCATE 12, 7: PRINT "IN DRIVE A: AND PRESS A KEY";
 8905 SOUND 200, 3: IF INKEY$ <> "" THEN 8905
-8910 K$ = INKEY$
-8911 IF K$ = "" AND JE% THEN JF% = 0: GOSUB 6800: K$ = JA$
-8912 IF K$ = "" THEN 8910
+8910 JA$ = INKEY$
+8911 IF JA$ = "" AND JE% THEN JF% = 0: GOSUB 6800
+8912 IF JA$ = "" THEN 8910
 8915 RETURN
 8940 REM ---- display on, palette cyan / red / grey (CGA: the mode register's B/W bit). A Tandy 1000 picks palette registers 3, 4, 7 for that, so open its palette mask (it masks them to 0-3) and set them ----
 8950 OUT &H3D8, &HE: OUT &H3D9, 0: IF TY = 0 THEN RETURN
