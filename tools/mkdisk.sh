@@ -47,7 +47,7 @@ echo "START:   $(mdir -i "$START" ::/ | grep free | xargs)"
 rm -f "$LAND"
 dd if=/dev/zero of="$LAND" bs=1024 count=360 2>/dev/null
 mformat -i "$LAND" -f 360 -v LUNARLAND ::
-LEVEL=$(ls "$R"/assets/*.PIC "$R"/assets/*.SPR "$R"/assets/*.MAP "$R"/assets/*.DAT "$R"/assets/*.RLE "$R"/assets/CKPIT.BIN | grep -v -E '/(MOONBG\.PIC|EARTH\.SPR|TITLE\.SPR|OFL\.SPR|OLM\.SPR|OLMK\.SPR|WRECK\.SPR|CRATER\.SPR)$')
+LEVEL=$(ls "$R"/assets/*.PIC "$R"/assets/*.SPR "$R"/assets/*.MAP "$R"/assets/*.DAT "$R"/assets/*.RLE "$R"/assets/CKPIT.BIN | grep -v -E '/(MOONBG\.PIC|EARTH\.SPR|TITLE\.SPR|CREDIT\.SPR|OFL\.SPR|OLM\.SPR|OLMK\.SPR|WRECK\.SPR|CRATER\.SPR)$')
 mcopy -o -i "$LAND" "$R/build/tok/LANDER.BAS" $LEVEL ::/
 echo "LANDING: $(mdir -i "$LAND" ::/ | grep free | xargs)"
 rm -rf "$T"

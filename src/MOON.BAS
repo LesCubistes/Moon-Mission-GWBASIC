@@ -1,14 +1,14 @@
 10 REM ==== MOON MISSION - START disk: title screen, high scores, mission menu ====
 20 REM Needs MOONBG.PIC, EARTH.SPR, TITLE.SPR here; each mission lives on its own disk in drive B:
 25 COMMON SK%, LS%, LD$
-26 COMMON JE%, JX%, JY%, JH%, JV%, JB%, JQ!
+26 COMMON JE%, JX%, JY%, JH%, JV%, JB%, JQ!, JM%
 30 DEFINT A-Z: KEY OFF: CLS
 40 EX = 112: EY = 33: HT = 126: SH = 82
 50 Y = 0: K = 0: S = 1: NM = 2: MI = 1: NMU = 0: A$ = "": DT! = .2: T0! = 0: KP = 0: HR = 0: HE = 0: I = 0: LD$ = "B:": P$ = "": TY = 0
 52 DEF SEG = &H40: I = PEEK(&H10): DEF SEG: IF (I AND &HC1) = 1 THEN LD$ = "A:": REM only one floppy drive: the mission disk goes in A: too
 53 DEF SEG = &HF000: TY = (PEEK(49152!) = &H21): DEF SEG: REM a Tandy 1000 needs its own palette registers set
 55 TS = 0: TW! = 0: TK = 0: NT = 0: SS = 0: SN! = 0: SPX = 0: SPY = 0: SDX = 0: J = 0
-57 JE% = JE%: JX% = JX%: JY% = JY%: JH% = JH%: JV% = JV%: JB% = JB%: JQ! = 0
+57 JE% = JE%: JX% = JX%: JY% = JY%: JH% = JH%: JV% = JV%: JB% = JB%: JQ! = 0: JM% = JM%
 58 JF% = 0: JA$ = "": JC% = 0: JD% = 0: JL% = 0: JU% = 0: JR% = 0: JW% = 0: JT% = 0: JK% = 0: JZ% = 0: JI% = 0
 60 DIM E(986), T(681), CR(376), M$(2), MU$(12), HB(4100), HN$(10), HS!(10), HL$(10)
 65 DIM TX(16), TY(16), TC(16), QX(3), QY(3), QC(3)
@@ -129,8 +129,12 @@
 6580 JE% = 1: JB% = 15: JQ! = 0: PRINT: PRINT "GAMEPAD ENABLED"
 6585 PRINT "Red A: confirm / throttle up": PRINT "Blue B: back / throttle down"
 6590 PRINT "Yellow C: engine off": PRINT "Green D: back to orbit/menu"
-6595 PRINT "D-pad: menus / flight keypad": PRINT "Release pad; ENTER to return."
-6600 GOSUB 6760: RETURN
+6595 PRINT "D-pad: menus / flight keypad": PRINT
+6596 PRINT "Hold A to burn? (Y/N)": PRINT " Y: engine runs only while A is held,": PRINT "    D-pad up/down sets the power": PRINT " N: each A press adds 10% power"
+6597 JA$ = INKEY$: IF JA$ <> "" THEN 6597
+6598 JA$ = INKEY$: IF JA$ = "" OR INSTR("YyNn", JA$) = 0 THEN 6598
+6599 JM% = -(JA$ = "Y" OR JA$ = "y"): IF JM% THEN PRINT "HOLD A TO BURN: ON" ELSE PRINT "HOLD A TO BURN: OFF"
+6600 PRINT "Release pad; ENTER to return.": GOSUB 6760: RETURN
 6720 PRINT: PRINT "No usable calibrated gameport found.": PRINT "Check port, pad mode and directions."
 6721 PRINT "CENTER "; JX%; JY%: PRINT "UP-LEFT "; JL%; JU%: PRINT "DOWN-RIGHT "; JR%; JW%
 6722 PRINT "Keyboard controls remain active.": PRINT "Press ENTER."
@@ -160,7 +164,7 @@
 6890 IF JK% < 0 THEN JA$ = CHR$(0) + "H": RETURN ELSE IF JK% > 0 THEN JA$ = CHR$(0) + "P": RETURN
 6895 IF JT% < 0 THEN JA$ = CHR$(0) + "K" ELSE JA$ = CHR$(0) + "M"
 6898 RETURN
-6900 LINE (0, 176)-(63, 199), 0, BF: LOCATE 23, 1: PRINT "J=PAD";: LOCATE 24, 1: PRINT "K=KEYS";: LOCATE 25, 1: IF JE% THEN PRINT "PAD ON"; ELSE PRINT "PAD OFF";
+6900 LINE (0, 176)-(63, 199), 0, BF: LOCATE 23, 1: PRINT "J=PAD";: LOCATE 24, 1: PRINT "K=KEYS";: LOCATE 25, 1: IF JE% = 0 THEN PRINT "PAD OFF"; ELSE IF JM% THEN PRINT "PAD HOLD"; ELSE PRINT "PAD ON";
 6905 RETURN
 8100 REM ---- load the high score table (empty until the first scores are saved in LANDHS.DAT) ----
 8110 HE = 0: ON ERROR GOTO 8180

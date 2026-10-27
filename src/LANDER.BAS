@@ -1,8 +1,8 @@
 10 REM ==== MOON LANDING - phase 1: pick a site from orbit; phase 2: land the lunar module ====
 20 REM Runs from the LUNAR LANDING disk (drive LD$, normally B:). Started by MOON on the START disk.
-25 REM Keypad: 8/5 throttle up/down, 0 or SPACE engine off, 7 9 4 6 1 2 3 thrusters
+25 REM Keypad: 8/5 throttle up/down, 0 or SPACE engine off, 7 9 4 6 1 2 3 thrusters; gamepad hold mode (JM%): A held = burn at TV
 30 COMMON SK%, LS%, LD$
-31 COMMON JE%, JX%, JY%, JH%, JV%, JB%, JQ!
+31 COMMON JE%, JX%, JY%, JH%, JV%, JB%, JQ!, JM%
 40 DEFINT A-Z: KEY OFF: RANDOMIZE TIMER
 50 REM -- every simple variable is created here, before any VARPTR/BLOAD --
 55 RP! = 0: T0! = 0: I = 0: OI = 0: Z = 0: DA = 0: XD = 0: DD = 0: CA! = 0: NS = 0: J = 0: K = 0: RO = 0: XF = 0: PN = 0: REM the cockpit replay loop's variables first: GW-BASIC finds early ones fastest
@@ -20,7 +20,7 @@
 112 LD$ = LD$ + "": SK% = SK%: LS% = LS%: REM create the COMMON ones too (LD$ is "" when run on its own: assets from the current drive)
 113 CS = 0: RI = 0: NR = 0: AW = 0: SN = 1: SB = 0: HP = 0: LL = 0: MX = -1: P$ = "": TY = 0: QB = 0: QS = 0: QM = 0: QF = 0
 114 DEF SEG = &HF000: TY = (PEEK(49152!) = &H21): DEF SEG: REM a Tandy 1000 needs its own palette registers set
-115 JE% = JE%: JX% = JX%: JY% = JY%: JH% = JH%: JV% = JV%: JB% = JB%: JQ! = 0
+115 JE% = JE%: JX% = JX%: JY% = JY%: JH% = JH%: JV% = JV%: JB% = JB%: JQ! = 0: JM% = JM%: TV = 6: IB = 0
 116 JF% = 0: JA$ = "": JC% = 0: JD% = 0: JL% = 0: JU% = 0: JR% = 0: JW% = 0: JT% = 0: JK% = 0: JZ% = 0: JI% = 0
 117 IF JE% THEN STRIG ON
 120 DIM PR(9), RA(24), RD(24), RT(24), H(639), SP(146), MK(146), BG(146), F1(146), F2(146), F3(146)
@@ -55,7 +55,7 @@
 197 BLOAD LD$ + "CKPIT.BIN", VARPTR(MC(0)): CA! = VARPTR(MC(0)): PR(0) = 0: CALL CA!(PR(0)): CS = PR(1): PR(0) = 1
 198 IF CS THEN DEF SEG = CS: BLOAD LD$ + "CKCOM.DAT", 49408!: DEF SEG: REM 64K from DOS for the cockpit view scenery
 199 PR(0) = 0: CALL CA!(PR(0)): SB = PR(1): RP! = VARPTR(H(0)): HP = RP! + 65536! * (RP! > 32767): REM 64K more: the site and its danger screens
-200 REM ==== phase 1: orbit - drift left/right, then burn down to a site (no fuel, no points) ====
+200 IF IB = 0 THEN IB = 1: GOSUB 1300: REM ==== phase 1: orbit - drift left/right, then burn down to a site (no fuel, no points) ====
 210 OUT &H3D8, &H6: CLS
 220 DEF SEG = &HB800: BLOAD LD$ + "ORBIT.PIC", 0: DEF SEG
 230 BX! = 146: BV! = 0: BY = 48: OX = -1: OZ = 0: OP = -1: PF = 0: FL = 0: MT! = 0: ZN = 2: T0! = TIMER
@@ -134,6 +134,13 @@
 1240 IF INKEY$ <> "" THEN 1240
 1242 WD! = .5: GOSUB 7900: RETURN
 1250 LINE (0, 8)-(319, 15), 0, BF: LOCATE 2, 21 - LEN(M$) \ 2: PRINT M$;: RETURN
+1300 REM ==== mission briefing: three pages, once when the mission starts (ESC skips the rest) ====
+1302 IF SB = 0 THEN RETURN ELSE I = 1
+1304 OUT &H3D8, &H6: DEF SEG = SB: BLOAD LD$ + "BRIEF" + CHR$(48 + I) + ".RLE", 53248!: DEF SEG: PR(0) = 6: PR(1) = SB: PR(2) = -1: PR(3) = -12288: CALL CA!(PR(0)): GOSUB 8950
+1306 IF INKEY$ <> "" THEN 1306
+1308 K$ = INKEY$: IF K$ = "" AND JE% THEN JF% = 0: GOSUB 6800: K$ = JA$
+1310 IF K$ = "" THEN 1308
+1312 IF K$ = CHR$(27) OR I = 3 THEN OUT &H3D8, &H6: RETURN ELSE I = I + 1: GOTO 1304
 2000 REM ==== main loop ====
 2010 T1! = TIMER: DT! = T1! - T0!: IF DT! < .05 AND DT! >= 0 THEN 2010
 2020 IF DT! > .3 OR DT! < 0 THEN DT! = .3
@@ -226,8 +233,8 @@
 3050 IF K$ = "-" THEN K = 5 ELSE IF K$ = "+" THEN K = 8 ELSE K = INSTR("123456789", K$)
 3060 IF K = 0 OR K = LK THEN RETURN
 3065 LK = K
-3070 IF K = 8 THEN TH = TH - (TH < 10 AND F! > 0): RETURN
-3080 IF K = 5 THEN TH = TH + (TH > 0): RETURN
+3070 IF K = 8 THEN IF JM% AND JE% THEN TV = TV - (TV < 10): RETURN ELSE TH = TH - (TH < 10 AND F! > 0): RETURN
+3080 IF K = 5 THEN IF JM% AND JE% THEN TV = TV + (TV > 1): RETURN ELSE TH = TH + (TH > 0): RETURN
 3090 IF F! < RF! THEN RETURN
 3100 F! = F! - RF!: VX! = VX! + RX!(K) * DV!: VY! = VY! + RY!(K) * DV!
 3110 PF = K: PT! = T1! + .2: RETURN
@@ -355,7 +362,7 @@
 6030 IF W < 78 THEN LINE (42 + W, 2)-(119, 4), 0, BF
 6040 AL = (H(XI + 14) - YI - 22) * 5: IF AL < 0 THEN AL = 0
 6045 RI = (RI + 1) MOD 25: RA(RI) = AL \ 5: RD(RI) = INT((X! + 284 * (SN - 1)) * 4): RV(RI) = INT(VY! * 10): RH(RI) = INT(VX! * 10): RT(RI) = TH: NR = NR + 1
-6050 LOCATE 2, 1: PRINT USING "ALT #### H+##.# V+##.# THR ###"; AL; VX!; -VY!; TH * 10;
+6050 LOCATE 2, 1: PRINT USING "ALT #### H+##.# V+##.# THR ###"; AL; VX!; -VY!; (TH + (TV - TH) * (JM% AND JE%)) * 10;
 6060 I = INT(T1! - ST!): IF I <> TL THEN TL = I: LOCATE 1, 32: PRINT USING "T ##"; I \ 60;: PRINT ":"; RIGHT$(STR$(100 + I MOD 60), 2);
 6062 IF T1! > LF! THEN GOSUB 6100
 6070 RETURN
@@ -381,6 +388,7 @@
 6835 IF STRIG(3) THEN JZ% = JZ% OR 4
 6840 IF STRIG(7) THEN JZ% = JZ% OR 8
 6845 JI% = JZ% AND NOT JB%: JB% = JZ%: IF JF% THEN JI% = JZ%
+6847 IF JF% AND JM% THEN JI% = JI% AND 14: TH = 0: IF (JZ% AND 1) AND F! > 0 THEN TH = TV: REM hold mode: the engine runs only while A is held
 6850 IF JI% AND 8 THEN JA$ = CHR$(27): RETURN
 6855 IF JI% AND 4 THEN JA$ = " ": RETURN
 6860 IF JI% AND 2 THEN IF JF% THEN JA$ = "5": RETURN ELSE JA$ = CHR$(27): RETURN
