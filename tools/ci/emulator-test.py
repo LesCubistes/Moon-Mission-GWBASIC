@@ -132,6 +132,10 @@ def screenshot(label):
         header = crop.crop((int(crop.width * .4), 0, int(crop.width * .7), int(crop.height * .045)))
         monochrome(header).save(out / 'lander-ocr.png')
         text += '\n' + subprocess.run(['tesseract', str(out / 'lander-ocr.png'), 'stdout', '--psm', '7'], capture_output=True, text=True, check=True).stdout.upper()
+        # Also read the crash report area, in case the flight already ended.
+        report = crop.crop((int(crop.width * .2), int(crop.height * .3), int(crop.width * .8), int(crop.height * .55)))
+        monochrome(report).save(out / 'report-ocr.png')
+        text += '\n' + subprocess.run(['tesseract', str(out / 'report-ocr.png'), 'stdout', '--psm', '6'], capture_output=True, text=True, check=True).stdout.upper()
         timer_bounds[label] = (x + int(width * .775), y, x + width, y + int(height * .04))
         clock = crop.crop((int(crop.width * .775), 0, crop.width, int(crop.height * .04)))
         timer_samples[label] = hashlib.sha256(monochrome(clock).tobytes()).hexdigest()
@@ -177,6 +181,13 @@ def wait_for(label, patterns, timeout=100, skip_intro=False, require_timer=False
         if any(re.search(x, text) for x in ['SYNTAXERROR', 'ILLEGALFUNCTION', 'OUTOFMEMORY', 'OUTOFDATA', 'FILENOTFOUND', 'UNDEFINEDLINE']):
             raise AssertionError(f'BASIC error during {label}: {text}')
         if all(contains(text, pattern) for pattern in patterns):
+            if require_timer and contains(text, 'LANDERSLEFT'):
+                # On a fast profile an unpowered flight can end between two OCR passes. The
+                # flight HUD under the crash report still proves the flight ran to its end.
+                timer_metrics[label] = 'ended before sampling'
+                checks.append(label)
+                print(f'PASS {a.machine}/{a.cycles}: {label} (already crashed)', flush=True)
+                return
             if require_timer:
                 clock_states.add(timer_samples[label])
                 # OCR can take longer than the entire unpowered flight on a
@@ -238,11 +249,18 @@ try:
         pad(32767, 32767)
         time.sleep(1)
         key('Return')
-        wait_for('setup-enabled', ['GAMEPADENABLED'])
+        wait_for('setup-enabled', ['GAMEPADENABLED', 'HOLDATOBURN'])
+        key('n')                       # keep tap-to-throttle; hold mode is a player's choice
+        wait_for('setup-mode', ['HOLDATOBURNOFF'])
         pad()
         key('Return')
         wait_for('setup-return', ['SELECTMISSION'])
     confirm()
+    # The mission opens with a three-page briefing; any key turns a page, back skips the rest.
+    wait_for('briefing', ['MISSIONBRIEFING', 'THEGOAL'])
+    confirm()
+    wait_for('briefing-2', ['READINGTHEGAUGES'])
+    back()
     wait_for('orbit' , ['SELECTLANDINGSITE', 'DESCEND'])
     confirm()
     wait_for('flight', ['ALT', 'LANDER', 'THR'], require_timer=True)

@@ -152,7 +152,7 @@ Single-drive disk swapping and the Tandy palette are in, and the game has been p
 
 Pull requests and pushes to main run `.github/workflows/compatibility.yml`. The matrix exercises DOSBox's CGA, Tandy and PCjr machine profiles at 300 cycles, plus CGA at 1200 cycles to catch timing assumptions. **CGA is a Laser XT proxy**, not an emulation of its exact motherboard, BIOS or speed utility. The DOS fixture is the existing Tandy system disk in `superterran/tandy1000ex`, pinned by Git revision and SHA-256. Emulator gameplay jobs use generic GW-BASIC 3.22 from a separately checksum-pinned archive fixture; `prepare-runtime.py --basic tandy` retains the original Tandy interpreter for OEM comparisons. The Tandy OEM interpreter produced unusable joystick calibration readings in the classic DOSBox profiles, so native-input tests identify the generic runtime explicitly. These checks do not cover every OEM/version.
 
-Each job builds the original two floppy images, checks the 8086 cockpit assembly against the committed BLOAD payload, and extracts the built images into isolated floppy-directory mounts for keyboard input plus screenshot/OCR assertions for title, mission menu, orbit, descent, unpowered crash, retry, return to orbit/menu and exit. Screenshots, OCR text, emulator logs and a JSON list of reached checkpoints are uploaded even after failure. OCR timeouts fail the job; merely starting DOSBox does not pass it. To run a profile locally:
+Each job builds the original two floppy images, checks the 8086 cockpit and rolling-moonscape assembly against the committed BLOAD payloads, and extracts the built images into isolated floppy-directory mounts for keyboard input plus screenshot/OCR assertions for title, mission menu, the mission briefing (two pages, then Esc skips the third), orbit, descent, unpowered crash, retry, return to orbit/menu and exit. Screenshots, OCR text, emulator logs and a JSON list of reached checkpoints are uploaded even after failure. OCR timeouts fail the job; merely starting DOSBox does not pass it. To run a profile locally:
 
 ```sh
 docker build -t moon-ci -f tools/ci/Dockerfile .
@@ -203,7 +203,7 @@ Press **J** at the mission menu for opt-in three-point calibration: release the 
 
 Use the Gravis standard four-button mode to expose C/D as joystick B's buttons. A two-button port still permits A/B and directions; use the keyboard for the extra actions. GrIP-only modes are outside this implementation. High-score initials still use the keyboard. Calibration rejection displays the raw readings to help diagnose unsupported ports/runtimes. A DA-15 connector alone does not verify that the Laser XT's interface supports standard PC gameport input.
 
-The test-only SDL shim drives DOSBox's emulated gameport without creating host input devices. Generic GW-BASIC 3.22 calibration, native confirmation, descent, retry and back navigation have been exercised in CGA emulation; physical Gravis/Tandy/Laser hardware verification remains required. This does not resolve the separately reported 256 KB freeze.
+The test-only SDL shim drives DOSBox's emulated gameport without creating host input devices. Generic GW-BASIC 3.22 calibration (answering N to Hold A to burn), native confirmation, descent, retry and back navigation have been exercised in CGA emulation; physical Gravis/Tandy/Laser hardware verification remains required. This does not resolve the separately reported 256 KB freeze.
 
 ## Shared development library
 

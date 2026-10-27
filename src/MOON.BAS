@@ -8,7 +8,7 @@
 52 DEF SEG = &H40: I = PEEK(&H10): DEF SEG: IF (I AND &HC1) = 1 THEN LD$ = "A:": REM only one floppy drive: the mission disk goes in A: too
 53 DEF SEG = &HF000: TY = (PEEK(49152!) = &H21): DEF SEG: REM a Tandy 1000 needs its own palette registers set
 54 GOSUB 8600: REM installed in one folder (a hard disk, DOSBox): the mission is right here, no disk to change
-55 TS = 0: TW! = 0: TK = 0: NT = 0: SS = 0: SN! = 0: SPX = 0: SPY = 0: SDX = 0: J = 0: RS = 0: RA! = 0: RT! = 0: RN = 0
+55 TZ = 0: TS = 0: TW! = 0: TK = 0: NT = 0: SS = 0: SN! = 0: SPX = 0: SPY = 0: SDX = 0: J = 0: RS = 0: RA! = 0: RT! = 0: RN = 0
 57 JE% = JE%: JX% = JX%: JY% = JY%: JH% = JH%: JV% = JV%: JB% = JB%: JQ! = 0: JM% = JM%
 58 JF% = 0: JA$ = "": JC% = 0: JD% = 0: JL% = 0: JU% = 0: JR% = 0: JW% = 0: JT% = 0: JK% = 0: JZ% = 0: JI% = 0
 60 DIM E(986), T(681), CR(376), M$(2), MU$(12), HB(4100), HN$(10), HS!(10), HL$(10)
@@ -195,7 +195,7 @@
 8610 RETURN
 8940 REM ---- display on, palette cyan / red / grey (CGA: the mode register's B/W bit). A Tandy 1000 picks palette registers 3, 4, 7 for that, so open its palette mask (it masks them to 0-3) and set them ----
 8950 OUT &H3D8, &HE: OUT &H3D9, 0: IF TY = 0 THEN RETURN
-8952 I = INP(&H3DA): OUT &H3DA, 1: OUT &H3DE, &HF: OUT &H3DA, &H10: OUT &H3DE, 0: OUT &H3DA, &H13: OUT &H3DE, 3: OUT &H3DA, &H14: OUT &H3DE, 4: OUT &H3DA, &H17: OUT &H3DE, 7: RETURN
+8952 TZ = INP(&H3DA): OUT &H3DA, 1: OUT &H3DE, &HF: OUT &H3DA, &H10: OUT &H3DE, 0: OUT &H3DA, &H13: OUT &H3DE, 3: OUT &H3DA, &H14: OUT &H3DE, 4: OUT &H3DA, &H17: OUT &H3DE, 7: RETURN
 9590 REM ---- stars that twinkle: count, then x, y, colour (picked by tools/mkstars.py from MOONBG.PIC) ----
 9600 DATA 16,10,73,3,11,81,3,28,109,3,30,58,3,44,58,3,52,70,1,71,98,3,93,119
 9601 DATA 3,242,80,3,242,118,3,226,84,1,274,92,3,290,78,3,303,82,1,306,99,3,317,53

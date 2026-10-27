@@ -18,7 +18,7 @@
 110 K$ = "": C$ = "": R$ = "": R2$ = "": M$ = "": N$ = "": PC$ = "": MP$ = ""
 111 H1 = 0: H2 = 0: H3 = 0: H4 = 0: SYB = 0
 112 LD$ = LD$ + "": SK% = SK%: LS% = LS%: REM create the COMMON ones too (LD$ is "" when run on its own: assets from the current drive)
-113 CS = 0: RI = 0: NR = 0: AW = 0: SN = 1: SB = 0: HP = 0: LL = 0: MX = -1: P$ = "": TY = 0: QB = 0: QS = 0: QM = 0: QF = 0
+113 CS = 0: RI = 0: NR = 0: AW = 0: SN = 1: SB = 0: HP = 0: LL = 0: MX = -1: P$ = "": TY = 0: TZ = 0: QB = 0: QS = 0: QM = 0: QF = 0
 114 DEF SEG = &HF000: TY = (PEEK(49152!) = &H21): DEF SEG: REM a Tandy 1000 needs its own palette registers set
 115 JE% = JE%: JX% = JX%: JY% = JY%: JH% = JH%: JV% = JV%: JB% = JB%: JQ! = 0: JM% = JM%: TV = 6: IB = 0
 116 JF% = 0: JA$ = "": JC% = 0: JD% = 0: JL% = 0: JU% = 0: JR% = 0: JW% = 0: JT% = 0: JK% = 0: JZ% = 0: JI% = 0
@@ -553,7 +553,7 @@
 8915 RETURN
 8940 REM ---- display on, palette cyan / red / grey (CGA: the mode register's B/W bit). A Tandy 1000 picks palette registers 3, 4, 7 for that, so open its palette mask (it masks them to 0-3) and set them ----
 8950 OUT &H3D8, &HE: OUT &H3D9, 0: IF TY = 0 THEN RETURN
-8952 I = INP(&H3DA): OUT &H3DA, 1: OUT &H3DE, &HF: OUT &H3DA, &H10: OUT &H3DE, 0: OUT &H3DA, &H13: OUT &H3DE, 3: OUT &H3DA, &H14: OUT &H3DE, 4: OUT &H3DA, &H17: OUT &H3DE, 7: RETURN
+8952 TZ = INP(&H3DA): OUT &H3DA, 1: OUT &H3DE, &HF: OUT &H3DA, &H10: OUT &H3DE, 0: OUT &H3DA, &H13: OUT &H3DE, 3: OUT &H3DA, &H14: OUT &H3DE, 4: OUT &H3DA, &H17: OUT &H3DE, 7: RETURN
 8958 REM ---- before CHAIN: erase the arrays, newest first. CHAIN otherwise drops every non-COMMON variable one at a time, shifting all the arrays each time (minutes on an XT) ----
 8960 ERASE RH, RV, KB, KF, KM, KS, BK, MC, EY, EX, EB, QC, QY, QX, TC, TY
 8961 ERASE TX, SG, CG, CMK, CMS, D6, D5, D4, D3, D2, D1, ZH, ZW, ZY, ZX, HL$
