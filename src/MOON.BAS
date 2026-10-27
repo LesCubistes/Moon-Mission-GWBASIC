@@ -10,7 +10,7 @@
 55 TS = 0: TW! = 0: TK = 0: NT = 0: SS = 0: SN! = 0: SPX = 0: SPY = 0: SDX = 0: J = 0
 57 JE% = JE%: JX% = JX%: JY% = JY%: JH% = JH%: JV% = JV%: JB% = JB%: JQ! = 0
 58 JF% = 0: JA$ = "": JC% = 0: JD% = 0: JL% = 0: JU% = 0: JR% = 0: JW% = 0: JT% = 0: JK% = 0: JZ% = 0: JI% = 0
-60 DIM E(986), T(681), CR(541), M$(2), MU$(12), HB(4100), HN$(10), HS!(10), HL$(10)
+60 DIM E(986), T(681), CR(376), M$(2), MU$(12), HB(4100), HN$(10), HS!(10), HL$(10)
 65 DIM TX(16), TY(16), TC(16), QX(3), QY(3), QC(3)
 70 M$(1) = "MOON LANDING": M$(2) = "EXIT TO DOS"
 80 GOSUB 5000
@@ -38,7 +38,7 @@
 400 REM ---- title; once the music ends show high scores; then the menu ----
 405 GOSUB 990
 410 LINE (EX, EY)-(EX + 95, HT - 1), 0, BF: E(1) = SH: PUT (EX, EY), E, PSET
-420 PUT (24, 6), T, PSET: PUT (196, 34), CR, PSET: REM "by Ryan Barrineau" under the title
+420 PUT (24, 6), T, PSET: PUT (216, 34), CR, PSET: REM "by Ryan Barrineau" under the title
 425 IF SK% <> 1 AND KP = 0 THEN GOSUB 1000
 430 LINE (72, 146)-(247, 197), 0, BF: LINE (72, 146)-(247, 197), 1, B
 440 LOCATE 20, 12: PRINT "- SELECT MISSION -";

@@ -135,7 +135,7 @@ tp[(tp == 3) & (np.arange(tp.shape[0])[:, None] < tp.shape[0] * 0.38)] = 1
 TW = tp.shape[1] + (-tp.shape[1]) % 4
 tpad = np.zeros((tp.shape[0], TW), np.uint8); tpad[:, :tp.shape[1]] = tp
 # the designer's credit under the title, on the right, the way Alley Cat signs "By Bill Williams"
-nf = ImageFont.truetype(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "fonts", "dancing-script-latin-700-normal.woff"), 20)
+nf = ImageFont.truetype(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "fonts", "dancing-script-latin-400-normal.woff"), 17)
 def script(txt):
     im = Image.new("L", (300, 40), 0); ImageDraw.Draw(im).text((2, 2), txt, font=nf, fill=255)
     a = np.asarray(im)
