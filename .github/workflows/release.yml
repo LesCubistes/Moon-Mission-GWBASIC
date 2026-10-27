@@ -41,6 +41,17 @@ jobs:
           VERSION: ${{ inputs.version }}
           COMMIT: ${{ github.sha }}
         run: |
+          cat > notes.md <<EOF
+          Ryan Barrineau's Moon Mission ${VERSION}
+
+          Land the lunar module on the Moon: a GW-BASIC game for the IBM PC/XT and compatibles with CGA graphics (or a Tandy 1000), first written for a VTech Laser XT.
+
+          Download **Moon-Mission-game.zip** and read README.TXT inside:
+          - FLOPPY/START.IMG and FLOPPY/LANDING.IMG: 360K disk images for real floppies or a Gotek
+          - MOON/: every game file in one folder, for a hard disk or DOSBox
+
+          You need your own DOS and GW-BASIC; neither is included. MAKEBOOT.BAT on the START disk can make it boot straight into the game.
+          EOF
+          sed -i 's/^          //' notes.md
           gh release create "$VERSION" release/Moon-Mission-game.zip release/SHA256SUMS \
-            --target "$COMMIT" --draft --title "Moon Mission $VERSION" \
-            --notes "Emulator matrix passed for this commit. Tokenized game-only disks, sources and art included; supply DOS/GW-BASIC separately. Physical hardware sign-off and release publication remain with Ryan."
+            --target "$COMMIT" --draft --title "Moon Mission $VERSION" --notes-file notes.md

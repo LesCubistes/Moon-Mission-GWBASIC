@@ -1,5 +1,15 @@
 #!/usr/bin/env python3
-"""Package tokenized game-only disks; never bundle DOS or BASIC fixtures."""
+"""Package the public release; never bundle DOS, BASIC or the Laser XT's SPEED.COM.
+
+release/Moon-Mission-game.zip holds:
+  README.TXT            the player's guide (tools/ci/README.TXT)
+  FLOPPY/START.IMG      360K START data disk: the title, MAKEBOOT.BAT, GO.BAT, README.TXT
+  FLOPPY/LANDING.IMG    360K LUNAR LANDING data disk
+  MOON/                 every game file in one folder, for a hard disk or DOSBox
+  source/, README.md    the BASIC sources and the developer notes
+The START disk keeps room at the very start of the disk for the DOS system files, so
+MAKEBOOT (SYS) can make it bootable even on DOS 3.x, which needs IO.SYS there.
+"""
 import hashlib
 from pathlib import Path
 import shutil
@@ -7,6 +17,7 @@ import subprocess
 import zipfile
 
 root = Path(__file__).resolve().parents[2]
+ci = Path(__file__).resolve().parent
 release = root / 'release'
 stage = root / 'build/release'
 if stage.exists():
@@ -23,33 +34,53 @@ for name, folder in [('MOON', start), ('LANDER', land)]:
         if len(line) > 250:
             raise SystemExit(f'{source}: line exceeds 250 characters')
     subprocess.run(['pcbasic', '--convert=b', str(source), str(folder / f'{name}.BAS')], check=True)
+START_ART = {'MOONBG.PIC', 'EARTH.SPR', 'TITLE.SPR', 'CREDIT.SPR', 'ROLL.BIN', 'ROLL.DAT'}
+OBSOLETE = {'OFL.SPR', 'OLM.SPR', 'OLMK.SPR', 'WRECK.SPR', 'CRATER.SPR',   # same as tools/mkdisk.sh
+            'LASERCHK.COM'}                                      # only for SPEED.COM, which isn't ours to share
 for asset in (root / 'assets').iterdir():
-    if asset.is_file():
-        folder = start if asset.name in {'MOONBG.PIC', 'EARTH.SPR', 'TITLE.SPR', 'CREDIT.SPR', 'ROLL.BIN', 'ROLL.DAT'} else land
-        # Same obsolete art exclusions as the original floppy builder.
-        if asset.name not in {'OFL.SPR', 'OLM.SPR', 'OLMK.SPR', 'WRECK.SPR', 'CRATER.SPR'}:
-            shutil.copy2(asset, folder / asset.name)
-for label, folder, command in [('START', start, 'MOON'), ('LANDING', land, 'LANDER')]:
+    if asset.is_file() and asset.name not in OBSOLETE:
+        shutil.copy2(asset, (start if asset.name in START_ART else land) / asset.name)
+guide = (ci / 'README.TXT').read_text().replace('\r\n', '\n').replace('\n', '\r\n').encode()
+for folder, command in [(start, 'MOON'), (land, 'LANDER')]:
     (folder / 'GO.BAT').write_bytes(f'@ECHO OFF\r\nGWBASIC {command}\r\n'.encode())
-    image = stage / f'{label}-GAME.IMG'
-    with image.open('wb') as f:
+shutil.copy2(ci / 'MAKEBOOT.BAT', start / 'MAKEBOOT.BAT')
+(start / 'README.TXT').write_bytes(guide)
+
+(stage / 'FLOPPY').mkdir()
+for label, folder, image in [('MOONSTART', start, 'START.IMG'), ('LUNARLAND', land, 'LANDING.IMG')]:
+    path = stage / 'FLOPPY' / image
+    with path.open('wb') as f:
         f.truncate(360 * 1024)
-    subprocess.run(['mformat', '-i', str(image), '-f', '360', '::'], check=True)
-    subprocess.run(['mcopy', '-i', str(image), *map(str, sorted(folder.iterdir())), '::/'], check=True)
-readme = '''Moon Mission - game-only release
+    subprocess.run(['mformat', '-i', str(path), '-f', '360', '::'], check=True)
+    files = sorted(folder.iterdir())
+    if folder is start:
+        # Two placeholder files take the first two directory entries and the first 80K, then the
+        # game files and the volume label go after them and the placeholders are deleted:
+        # SYS finds both the entries and the space free.
+        tmp = stage / 'reserve'
+        tmp.mkdir()
+        for n in ('IO.$$$', 'MSDOS.$$$'):
+            (tmp / n).write_bytes(b'\0' * 40 * 1024)
+            subprocess.run(['mcopy', '-i', str(path), str(tmp / n), '::/'], check=True)
+        subprocess.run(['mcopy', '-i', str(path), *map(str, files), '::/'], check=True)
+        subprocess.run(['mlabel', '-i', str(path), f'::{label}'], check=True)
+        subprocess.run(['mdel', '-i', str(path), '::/IO.$$$', '::/MSDOS.$$$'], check=True)
+        shutil.rmtree(tmp)
+    else:
+        subprocess.run(['mlabel', '-i', str(path), f'::{label}'], check=True)
+        subprocess.run(['mcopy', '-i', str(path), *map(str, files), '::/'], check=True)
+    listing = subprocess.run(['mdir', '-i', str(path), '::/'], capture_output=True, text=True).stdout
+    print(image, ' '.join(l.strip() for l in listing.splitlines() if 'free' in l))
 
-START-GAME.IMG and LANDING-GAME.IMG are 360K data disks, NOT bootable disks.
-They deliberately contain no DOS or BASIC interpreter. Start DOS separately,
-provide your own compatible GWBASIC.EXE on START, then type GO with START in A:
-and LANDING in B:. Existing single-drive support is not implied by this package.
-The START/ and LANDING/ folders contain the same files for emulator directory mounts.
-The source files are included under source/.
-
-Emulator checks are functional smoke tests. Real Laser XT, Tandy 1000 and PCjr
-hardware, successful landing/replay, score persistence and disk-swap verification
-require separate sign-off by the maintainer before publication.
-'''
-(stage / 'RELEASE.txt').write_text(readme)
+one = stage / 'MOON'                                     # the one-folder install
+one.mkdir()
+for folder in (land, start):                             # START's GO.BAT wins
+    for f in folder.iterdir():
+        shutil.copy2(f, one / f.name)
+(one / 'MAKEBOOT.BAT').unlink()
+shutil.rmtree(start)
+shutil.rmtree(land)
+(stage / 'README.TXT').write_bytes(guide)
 shutil.copytree(root / 'src', stage / 'source')
 shutil.copy2(root / 'README.md', stage / 'README.md')
 archive = release / 'Moon-Mission-game.zip'

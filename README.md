@@ -6,6 +6,15 @@ By Ryan Barrineau. A space game written in GW-BASIC for a VTech Laser XT (8088, 
 
 The first mission is **Moon Landing**: pick a landing site from orbit, then fly the lunar module down onto a landing pad. Every screen of the level is shown in [`docs/screens.png`](docs/screens.png).
 
+## Download and play
+Get **Moon-Mission-game.zip** from [Releases](https://github.com/LesCubistes/Moon-Mission-GWBASIC/releases) and read `README.TXT` inside. It has two 360K floppy images (`FLOPPY/START.IMG`, `FLOPPY/LANDING.IMG`) and a `MOON` folder with every game file, for a hard disk or DOSBox.
+
+**What you need:** an IBM PC/XT/AT or compatible with CGA graphics (a Tandy 1000 works too) or DOSBox; 512K of memory (with less, the title Moon stands still and the touchdown replay is skipped); DOS 3.0 or later; and **your own GW-BASIC** (3.22 tested, Tandy BASIC 2.02 also runs it). DOS and GW-BASIC are not included.
+
+- **Floppies:** copy your GWBASIC.EXE onto START, boot DOS, put START in A: and LUNAR LANDING in B:, then type `GO` from A:. One drive works too; the game asks for swaps.
+- **Boot straight into the game:** from DOS, run `B:MAKEBOOT B: C:\DOS\GWBASIC.EXE` (the START disk's drive, then your GWBASIC.EXE). It runs `SYS` and copies COMMAND.COM and GW-BASIC onto START with an AUTOEXEC.BAT. The START image keeps the start of the disk free so `SYS` works even on DOS 3.3.
+- **Hard disk or DOSBox:** copy the `MOON` folder, put GWBASIC.EXE in it, then `CD \MOON` and `GO`. When `LANDER.BAS` is in the same folder as the game, MOON loads the mission from there instead of B:.
+
 ## The disks
 The game is split into one start disk and one disk per mission, built by `tools/mkdisk.sh`.
 
@@ -156,7 +165,7 @@ docker run --init --rm -v "$PWD:/workspace" moon-ci bash -euc '
 
 The emulated journey is a functional smoke test of the image contents. It does not boot DOS or validate a BIOS floppy controller. Direct image mounts in the classic Ubuntu DOSBox runner truncated mission reads in testing; directory mounts of the exact extracted files avoid that emulator path. Real disk-image boot/read tests remain separate. Successful soft landing/cockpit replay, all three terrain routes, high-score persistence, PCjr/Tandy memory limits, exact palettes, audio quality and single-drive swaps still need dedicated tests and real-hardware sign-off.
 
-Ryan (`LesCubistes`) triggers **Ryan prepares a release** manually in Actions and supplies a version such as `v0.1.0`. The workflow reruns the whole matrix, then creates a **draft** release for him to review and publish. There is no automatic release on pushes or tags. Its ZIP contains tokenized BASIC, art, sources, checksums and two 360K **game-only data images**; DOS and the BASIC interpreter are excluded. These data images do not boot by themselves. Runtime-containing test disks are not uploaded as release artifacts.
+Ryan (`LesCubistes`) triggers **Ryan prepares a release** manually in Actions and supplies a version such as `v1.0.0`. The workflow reruns the whole matrix, then creates a **draft** release for him to review and publish. There is no automatic release on pushes or tags. `tools/ci/package-release.py` builds `Moon-Mission-game.zip`: the player's guide (`tools/ci/README.TXT`), the START and LANDING 360K data images (START carries `GO.BAT`, `MAKEBOOT.BAT` and the guide, and keeps the first directory entries and 80K free for `SYS`), the one-folder `MOON` install, the BASIC sources and this README. DOS, the BASIC interpreter, SPEED.COM and LASERCHK.COM are left out. The data images do not boot by themselves until MAKEBOOT is run.
 
 GW-BASIC is interpreted: tokenization and disk packaging are sufficient for the current distribution. `asm/ckpit.asm` is already compiled 8086 code and can be rebuilt with NASM. A conversion to an EXE/COM compiler would need its own compatibility work around `CHAIN`/`COMMON`, floating-point physics, graphics and the `VARPTR`/`CALL` interface; it is not a prerequisite for releasing this version.
 

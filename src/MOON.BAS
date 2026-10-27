@@ -1,5 +1,5 @@
 10 REM ==== MOON MISSION - START disk: title screen, high scores, mission menu ====
-20 REM Needs MOONBG.PIC, EARTH.SPR, TITLE.SPR, CREDIT.SPR, ROLL.BIN, ROLL.DAT here; each mission lives on its own disk in drive B:
+20 REM Needs MOONBG.PIC, EARTH.SPR, TITLE.SPR, CREDIT.SPR, ROLL.BIN, ROLL.DAT here; each mission lives on its own disk in drive B: (or in this folder)
 25 COMMON SK%, LS%, LD$
 26 COMMON JE%, JX%, JY%, JH%, JV%, JB%, JQ!, JM%
 30 DEFINT A-Z: KEY OFF: CLS
@@ -7,6 +7,7 @@
 50 Y = 0: K = 0: S = 1: NM = 2: MI = 1: NMU = 0: A$ = "": DT! = .2: T0! = 0: KP = 0: HR = 0: HE = 0: I = 0: LD$ = "B:": P$ = "": TY = 0
 52 DEF SEG = &H40: I = PEEK(&H10): DEF SEG: IF (I AND &HC1) = 1 THEN LD$ = "A:": REM only one floppy drive: the mission disk goes in A: too
 53 DEF SEG = &HF000: TY = (PEEK(49152!) = &H21): DEF SEG: REM a Tandy 1000 needs its own palette registers set
+54 GOSUB 8600: REM installed in one folder (a hard disk, DOSBox): the mission is right here, no disk to change
 55 TS = 0: TW! = 0: TK = 0: NT = 0: SS = 0: SN! = 0: SPX = 0: SPY = 0: SDX = 0: J = 0: RS = 0: RA! = 0: RT! = 0: RN = 0
 57 JE% = JE%: JX% = JX%: JY% = JY%: JH% = JH%: JV% = JV%: JB% = JB%: JQ! = 0: JM% = JM%
 58 JF% = 0: JA$ = "": JC% = 0: JD% = 0: JL% = 0: JU% = 0: JR% = 0: JW% = 0: JT% = 0: JK% = 0: JZ% = 0: JI% = 0
@@ -190,6 +191,8 @@
 8535 NEXT I
 8540 IF HR THEN LINE (44, 55 + 8 * HR)-(277, 64 + 8 * HR), 2, B
 8550 RETURN
+8600 HE = 0: ON ERROR GOTO 8180: OPEN "LANDER.BAS" FOR INPUT AS #1: ON ERROR GOTO 0: IF HE = 0 THEN CLOSE #1: LD$ = ""
+8610 RETURN
 8940 REM ---- display on, palette cyan / red / grey (CGA: the mode register's B/W bit). A Tandy 1000 picks palette registers 3, 4, 7 for that, so open its palette mask (it masks them to 0-3) and set them ----
 8950 OUT &H3D8, &HE: OUT &H3D9, 0: IF TY = 0 THEN RETURN
 8952 I = INP(&H3DA): OUT &H3DA, 1: OUT &H3DE, &HF: OUT &H3DA, &H10: OUT &H3DE, 0: OUT &H3DA, &H13: OUT &H3DE, 3: OUT &H3DA, &H14: OUT &H3DE, 4: OUT &H3DA, &H17: OUT &H3DE, 7: RETURN
