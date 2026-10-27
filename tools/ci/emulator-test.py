@@ -3,6 +3,7 @@
 import argparse
 from difflib import SequenceMatcher
 import json
+import hashlib
 import os
 from pathlib import Path
 import re
@@ -66,6 +67,8 @@ gwbasic moon
 exit
 ''')
 checks = []
+timer_samples = {}
+timer_metrics = {}
 success = False
 failure = None
 log = (out / 'emulator.log').open('w')
@@ -123,6 +126,13 @@ def screenshot(label):
     gray.save(out / 'ocr.png')
     result = subprocess.run(['tesseract', str(out / 'ocr.png'), 'stdout', '--psm', '6'], capture_output=True, text=True, check=True)
     text = result.stdout.upper()
+    if label in {'flight', 'retry'}:
+        # Read the lander counter separately from the adjacent fuel-gauge border.
+        header = crop.crop((int(crop.width * .4), 0, int(crop.width * .7), int(crop.height * .045)))
+        monochrome(header).save(out / 'lander-ocr.png')
+        text += '\n' + subprocess.run(['tesseract', str(out / 'lander-ocr.png'), 'stdout', '--psm', '7'], capture_output=True, text=True, check=True).stdout.upper()
+        clock = crop.crop((int(crop.width * .775), 0, crop.width, int(crop.height * .04)))
+        timer_samples[label] = hashlib.sha256(monochrome(clock).tobytes()).hexdigest()
     errors = monochrome(crop.crop((0, int(crop.height * .7), crop.width, crop.height)))
     errors.save(out / 'error-ocr.png')
     diagnostic = subprocess.run(['tesseract', str(out / 'error-ocr.png'), 'stdout', '--psm', '6'], capture_output=True, text=True, check=True).stdout.upper()
@@ -152,9 +162,10 @@ def contains(text, expected):
     return False
 
 
-def wait_for(label, patterns, timeout=100, skip_intro=False):
+def wait_for(label, patterns, timeout=100, skip_intro=False, require_timer=False):
     end = time.monotonic() + timeout
     matched_at = None
+    clock_states = set()
     next_skip = time.monotonic() + 2
     settle = 3 if label in {"orbit", "return-orbit"} else 1
     while time.monotonic() < end:
@@ -164,6 +175,12 @@ def wait_for(label, patterns, timeout=100, skip_intro=False):
         if any(re.search(x, text) for x in ['SYNTAXERROR', 'ILLEGALFUNCTION', 'OUTOFMEMORY', 'OUTOFDATA', 'FILENOTFOUND', 'UNDEFINEDLINE']):
             raise AssertionError(f'BASIC error during {label}: {text}')
         if all(contains(text, pattern) for pattern in patterns):
+            if require_timer:
+                clock_states.add(timer_samples[label])
+                timer_metrics[label] = len(clock_states)
+                if len(clock_states) < 3:
+                    time.sleep(.5)
+                    continue
             if matched_at is None:
                 matched_at = time.monotonic()
             if time.monotonic() - matched_at < settle:
@@ -211,11 +228,11 @@ try:
     confirm()
     wait_for('orbit' , ['SELECTLANDINGSITE', 'DESCEND'])
     confirm()
-    wait_for('flight', ['ALT', 'LANDER', 'THR'])
+    wait_for('flight', ['ALT', 'LANDER', 'THR'], require_timer=True)
     # An unpowered descent must reach the crash/report path rather than hang.
     wait_for('crash', ['LANDERSLEFT', 'ENTER'], timeout=120)
     confirm()
-    wait_for('retry', ['ALT', 'LANDER2', 'THR'])
+    wait_for('retry', ['ALT', 'LANDER2', 'THR'], require_timer=True)
     back()
     wait_for('return-orbit', ['SELECTLANDINGSITE'])
     back()
@@ -241,4 +258,4 @@ finally:
             proc.kill()
             proc.wait()
     log.close()
-    (out / 'results.json').write_text(json.dumps({'machine': a.machine, 'cycles': a.cycles, 'gameport': a.gameport, 'success': success, 'failure': failure, 'passed': checks}, indent=2) + '\n')
+    (out / 'results.json').write_text(json.dumps({'machine': a.machine, 'cycles': a.cycles, 'gameport': a.gameport, 'timer_states': timer_metrics, 'runtime_sha256': hashlib.sha256((drives / 'start/GWBASIC.EXE').read_bytes()).hexdigest(), 'success': success, 'failure': failure, 'passed': checks}, indent=2) + '\n')
