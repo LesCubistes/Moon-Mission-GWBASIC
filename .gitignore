@@ -10,3 +10,4 @@ build/
 
 release/
 __pycache__/
+_site/

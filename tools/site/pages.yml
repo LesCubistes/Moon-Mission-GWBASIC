@@ -1,0 +1,46 @@
+name: Publish the website
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Find the release to point the Download button at
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          TAG="$EVENT_TAG"
+          if [ -z "$TAG" ]; then TAG=$(gh release view --json tagName -q .tagName 2>/dev/null || true); fi
+          echo "REPO_URL=${{ github.server_url }}/${{ github.repository }}" >> "$GITHUB_ENV"
+          if [ -n "$TAG" ]; then
+            gh release view "$TAG" --json publishedAt,assets > release.json
+            echo "VERSION=$TAG" >> "$GITHUB_ENV"
+            echo "RELEASE_DATE=$(jq -r .publishedAt release.json)" >> "$GITHUB_ENV"
+            echo "ZIP_SIZE=$(jq -r '[.assets[] | select(.name == "Moon-Mission-game.zip") | .size][0] // empty' release.json)" >> "$GITHUB_ENV"
+          fi
+      - name: Build the site
+        run: python3 tools/site/build.py
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

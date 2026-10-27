@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Moon Mission</title>
+<meta name="description" content="Ryan Barrineau's Moon Mission: land the lunar module on the Moon. A GW-BASIC game for the IBM PC/XT with CGA graphics.">
+<meta property="og:title" content="Ryan Barrineau's Moon Mission">
+<meta property="og:description" content="Land the lunar module on the Moon. A GW-BASIC game for the IBM PC/XT with CGA graphics.">
+<meta property="og:image" content="img/title.png">
+<link rel="icon" href="img/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #04050a;
+  --panel: #0c0f18;
+  --line: #1f2a3a;
+  --text: #d6dbe3;
+  --dim: #8b95a6;
+  --cyan: #55ffff;
+  --cyan-d: #00aaaa;
+  --red: #ff5555;
+  --red-d: #aa0000;
+  --grey: #aaaaaa;
+  --pixel: "Press Start 2P", monospace;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 17px/1.6 "IBM Plex Sans", system-ui, sans-serif;
+  background-image:
+    radial-gradient(1px 1px at 12% 18%, #fff8 50%, transparent 51%),
+    radial-gradient(1px 1px at 72% 9%, #5ff8 50%, transparent 51%),
+    radial-gradient(1px 1px at 38% 64%, #fff6 50%, transparent 51%),
+    radial-gradient(1px 1px at 88% 52%, #fff7 50%, transparent 51%),
+    radial-gradient(1px 1px at 57% 83%, #5ff6 50%, transparent 51%),
+    radial-gradient(1px 1px at 23% 91%, #fff5 50%, transparent 51%);
+  background-size: 420px 420px;
+}
+a { color: var(--cyan); }
+img.px { image-rendering: pixelated; image-rendering: crisp-edges; }
+.wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+
+/* top bar */
+nav { position: sticky; top: 0; z-index: 5; background: #04050add; backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); }
+nav .wrap { display: flex; align-items: center; gap: 20px; height: 54px; }
+nav .brand { font: 11px var(--pixel); color: var(--cyan); text-decoration: none; white-space: nowrap; }
+nav .links { display: flex; gap: 18px; margin-left: auto; overflow-x: auto; }
+nav .links a { color: var(--dim); text-decoration: none; font-size: 15px; white-space: nowrap; }
+nav .links a:hover { color: var(--text); }
+
+/* hero */
+.hero { padding: 48px 0 40px; text-align: center; }
+.hero .by { font: 12px var(--pixel); color: var(--red); letter-spacing: 1px; margin: 0 0 14px; }
+.hero h1 { font: 34px/1.3 var(--pixel); margin: 0 0 22px; color: var(--grey);
+  text-shadow: 3px 3px 0 var(--red-d); }
+.hero h1 span { color: var(--cyan); }
+.screen { display: block; width: 100%; max-width: 760px; margin: 0 auto; aspect-ratio: 4 / 3;
+  border: 2px solid var(--line); border-radius: 6px; background: #000; box-shadow: 0 0 60px #00aaaa22; }
+.hero p.lead { max-width: 680px; margin: 26px auto 26px; font-size: 19px; color: var(--text); }
+.cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.btn { display: inline-flex; align-items: center; gap: 10px; padding: 14px 22px; border-radius: 6px;
+  font: 12px var(--pixel); text-decoration: none; border: 2px solid var(--cyan-d); color: var(--cyan); }
+.btn.primary { background: var(--cyan-d); color: #000; border-color: var(--cyan); }
+.btn.primary:hover { background: var(--cyan); }
+.btn:hover { border-color: var(--cyan); }
+.meta { margin-top: 14px; font: 14px var(--mono); color: var(--dim); }
+
+section { padding: 44px 0; border-top: 1px solid var(--line); }
+h2 { font: 16px/1.5 var(--pixel); color: var(--cyan); margin: 0 0 20px; }
+h3 { font: 600 18px "IBM Plex Sans", sans-serif; margin: 0 0 8px; color: var(--text); }
+p { margin: 0 0 14px; }
+.muted { color: var(--dim); }
+
+.features { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 18px; }
+.card .tag { font: 10px var(--pixel); color: var(--red); margin-bottom: 10px; }
+
+.gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+figure { margin: 0; }
+figure img { width: 100%; aspect-ratio: 4 / 3; display: block; border: 1px solid var(--line); border-radius: 4px; background: #000; }
+figcaption { font-size: 14px; color: var(--dim); margin-top: 6px; }
+
+ul.need { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+ul.need li { padding-left: 26px; position: relative; }
+ul.need li::before { content: ""; position: absolute; left: 4px; top: 10px; width: 10px; height: 10px; background: var(--cyan-d); }
+ul.need li.no::before { background: var(--red-d); }
+
+.ways { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 16px; }
+pre, code { font-family: var(--mono); }
+pre { background: #000; border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; margin: 10px 0; overflow-x: auto; font-size: 14px; color: var(--grey); }
+code { color: var(--cyan); font-size: 0.92em; }
+pre code { color: inherit; }
+ol { padding-left: 22px; margin: 0; }
+ol li { margin-bottom: 6px; }
+
+.twocol { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+@media (max-width: 760px) { .twocol { grid-template-columns: 1fr; } .hero h1 { font-size: 22px; } nav .brand { display: none; } }
+table { width: 100%; border-collapse: collapse; font-size: 15px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--dim); font-weight: 600; }
+td.k { font-family: var(--mono); color: var(--cyan); white-space: nowrap; }
+.keypad { display: grid; grid-template-columns: repeat(3, 44px); gap: 6px; margin: 4px 0 14px; }
+.keypad div { height: 44px; border: 2px solid var(--cyan-d); border-radius: 4px; display: grid; place-items: center; font: 13px var(--pixel); color: var(--grey); }
+.keypad .hot { color: var(--red); }
+.keypad .zero { grid-column: 1 / span 3; color: var(--cyan); }
+.hud { background: #000; border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; font: 14px var(--mono); color: var(--grey); white-space: pre; overflow-x: auto; }
+.hud b { color: var(--cyan); font-weight: 600; }
+.safe { margin-top: 14px; padding: 12px 14px; border-left: 4px solid var(--red-d); background: var(--panel); }
+.diff-easy { color: var(--cyan); } .diff-med { color: var(--grey); } .diff-hard { color: var(--red); }
+
+footer { padding: 34px 0 50px; border-top: 1px solid var(--line); color: var(--dim); font-size: 14px; }
+footer .wrap { display: grid; gap: 8px; }
+</style>
+</head>
+<body>
+
+<nav><div class="wrap">
+  <a class="brand" href="#top">MOON MISSION</a>
+  <div class="links">
+    <a href="#screens">Screens</a>
+    <a href="#need">What you need</a>
+    <a href="#install">Install</a>
+    <a href="#play">How to play</a>
+    <a href="#scoring">Scoring</a>
+    <a href="{{REPO}}">Source</a>
+  </div>
+</div></nav>
+
+<header class="hero" id="top"><div class="wrap">
+  <p class="by">RYAN BARRINEAU'S</p>
+  <h1>MOON <span>MISSION</span></h1>
+  <img class="screen px" src="img/earthrise.gif" alt="The title screen: the Earth rises over a rolling lunar surface" width="640" height="480">
+  <p class="lead">Land the lunar module on the Moon. Pick a site from orbit, ride the braking burn down, then fly the lander onto a pad with the main engine and the side jets. A GW-BASIC game for the IBM PC/XT and compatibles with CGA graphics, first written for a VTech Laser XT.</p>
+  <div class="cta">
+    <a class="btn primary" href="{{ZIP_URL}}">&#x2193; DOWNLOAD {{VERSION}}</a>
+    <a class="btn" href="#install">HOW TO INSTALL</a>
+  </div>
+  <p class="meta">{{RELEASE_LINE}}</p>
+</div></header>
+
+<section><div class="wrap">
+  <h2>THE MISSION</h2>
+  <div class="features">
+    <div class="card"><div class="tag">ORBIT</div><h3>Pick your landing site</h3><p class="muted">Drift over the Moon and choose Tranquility Base, Fra Mauro or Hadley Rille: easy, medium or hard.</p></div>
+    <div class="card"><div class="tag">DESCENT</div><h3>Fly it down</h3><p class="muted">Throttle the main engine and steer with the side jets. Watch your speed and your fuel, and find level ground.</p></div>
+    <div class="card"><div class="tag">TOUCHDOWN</div><h3>See it from the cockpit</h3><p class="muted">A safe landing replays the last seconds of your own descent out of the commander's window.</p></div>
+    <div class="card"><div class="tag">3 LANDERS</div><h3>Chase the high score</h3><p class="muted">Narrow pads pay up to ten times. The top ten scores are saved on your START disk.</p></div>
+  </div>
+</div></section>
+
+<section id="screens"><div class="wrap">
+  <h2>SCREENS</h2>
+  <div class="gallery">
+    <figure><img class="px" src="img/title.png" alt="Title screen and mission menu" loading="lazy"><figcaption>The title and mission menu</figcaption></figure>
+    <figure><img class="px" src="img/briefing.png" alt="Mission briefing" loading="lazy"><figcaption>The mission briefing</figcaption></figure>
+    <figure><img class="px" src="img/orbit.png" alt="Choosing a landing site from orbit" loading="lazy"><figcaption>Choosing a landing site from orbit</figcaption></figure>
+    <figure><img class="px" src="img/braking.png" alt="The braking burn" loading="lazy"><figcaption>The braking burn</figcaption></figure>
+    <figure><img class="px" src="img/flight.png" alt="Flying the lander at Fra Mauro" loading="lazy"><figcaption>Flying down to Fra Mauro</figcaption></figure>
+    <figure><img class="px" src="img/danger.png" alt="Rough ground beside Hadley Rille" loading="lazy"><figcaption>Drift too far and the ground turns deadly</figcaption></figure>
+    <figure><img class="px" src="img/crash.png" alt="A crash report" loading="lazy"><figcaption>Not every landing goes well</figcaption></figure>
+    <figure><img class="px" src="img/cockpit.png" alt="The touchdown replay from the cockpit" loading="lazy"><figcaption>The touchdown, from the commander's window</figcaption></figure>
+  </div>
+</div></section>
+
+<section id="need"><div class="wrap twocol">
+  <div>
+    <h2>WHAT YOU NEED</h2>
+    <ul class="need">
+      <li>An IBM PC, XT, AT or compatible (8088 or better) with CGA graphics. A Tandy 1000 works too. Or the free <a href="https://www.dosbox.com/">DOSBox</a> emulator on a modern computer.</li>
+      <li>512K of memory. With less, the title Moon stands still and the touchdown replay is skipped.</li>
+      <li>MS-DOS or PC-DOS 3.0 or later.</li>
+      <li>Your own copy of GW-BASIC. Version 3.22 is tested; Tandy's BASIC 2.02 runs it too.</li>
+      <li>Two 360K floppy drives, or one (the game asks you to swap disks), or a hard disk.</li>
+      <li class="no">Not included: DOS and GW-BASIC. The download has the game only.</li>
+    </ul>
+  </div>
+  <div>
+    <h2>IN THE DOWNLOAD</h2>
+    <table>
+      <tr><td class="k">FLOPPY\START.IMG</td><td>The START disk: title, high scores, mission menu</td></tr>
+      <tr><td class="k">FLOPPY\LANDING.IMG</td><td>The LUNAR LANDING disk: the Moon Landing mission</td></tr>
+      <tr><td class="k">MOON\</td><td>Every game file in one folder, for a hard disk or DOSBox</td></tr>
+      <tr><td class="k">README.TXT</td><td>The full player's guide</td></tr>
+    </table>
+    <p class="muted" style="margin-top:12px">The images are plain 360K floppy images. Write them to real floppies with a tool such as WinImage, dd or Greaseweazle, or load them on a Gotek.</p>
+  </div>
+</div></section>
+
+<section id="install"><div class="wrap">
+  <h2>INSTALL</h2>
+  <div class="ways">
+    <div class="card">
+      <div class="tag">FLOPPIES</div>
+      <ol>
+        <li>Copy your GWBASIC.EXE onto the START disk.</li>
+        <li>Boot your computer into DOS.</li>
+        <li>Put START in A: and LUNAR LANDING in B:.</li>
+        <li>Type:</li>
+      </ol>
+      <pre><code>A:
+GO</code></pre>
+      <p class="muted">One drive? Use A: for both; the game tells you when to swap. Leave START's write-protect tab off so high scores can be saved.</p>
+    </div>
+    <div class="card">
+      <div class="tag">BOOT STRAIGHT IN</div>
+      <p>Run MAKEBOOT once from DOS. It puts your DOS, COMMAND.COM and GW-BASIC on the START disk, so it boots right into the game:</p>
+      <pre><code>B:MAKEBOOT B: C:\DOS\GWBASIC.EXE</code></pre>
+      <p class="muted">The first part is the START disk's drive, the second is where your GWBASIC.EXE is. If SYS says there's no room, format a blank disk with <code>FORMAT B: /S</code>, copy START onto it and run MAKEBOOT there.</p>
+    </div>
+    <div class="card">
+      <div class="tag">HARD DISK OR DOSBOX</div>
+      <p>Copy the MOON folder to your hard disk and put GWBASIC.EXE in it, then:</p>
+      <pre><code>CD \MOON
+GO</code></pre>
+      <p>In DOSBox, set <code>machine=cga</code> and about <code>cycles=300</code> for real XT speed, then:</p>
+      <pre><code>MOUNT C C:\GAMES
+C:
+CD \MOON
+GO</code></pre>
+    </div>
+  </div>
+</div></section>
+
+<section id="play"><div class="wrap twocol">
+  <div>
+    <h2>CONTROLS</h2>
+    <div class="keypad">
+      <div>7</div><div class="hot">8</div><div>9</div>
+      <div>4</div><div class="hot">5</div><div>6</div>
+      <div>1</div><div>2</div><div>3</div>
+      <div class="zero">0</div>
+    </div>
+    <table>
+      <tr><td class="k">8 or +</td><td>More main engine (+10%)</td></tr>
+      <tr><td class="k">5 or -</td><td>Less main engine (-10%)</td></tr>
+      <tr><td class="k">0 or Space</td><td>Engine off</td></tr>
+      <tr><td class="k">4 6</td><td>Push left / right</td></tr>
+      <tr><td class="k">7 9</td><td>Lift up-left / up-right</td></tr>
+      <tr><td class="k">1 2 3</td><td>Push down</td></tr>
+      <tr><td class="k">Esc</td><td>Back to orbit</td></tr>
+    </table>
+    <p class="muted" style="margin-top:12px">The arrow keys work too. In orbit, 4 and 6 drift left and right and 2 or Enter descends. A gameport joystick or gamepad works as well: press J on the title screen to set it up, and answer Y to <b>Hold A to burn</b> if you want the engine to fire only while A is held.</p>
+  </div>
+  <div>
+    <h2>THE GAUGES</h2>
+    <div class="hud"><b>ALT</b>  120 <b>H</b> +1.5 <b>V</b> -3.2 <b>THR</b>  60</div>
+    <table style="margin-top:12px">
+      <tr><td class="k">ALT</td><td>Height above the ground</td></tr>
+      <tr><td class="k">H</td><td>Sideways speed: +1.5 means moving right</td></tr>
+      <tr><td class="k">V</td><td>Up/down speed: -3.2 means moving down</td></tr>
+      <tr><td class="k">THR</td><td>Main engine power, in percent</td></tr>
+      <tr><td class="k">Fuel</td><td>The bar at the top left</td></tr>
+    </table>
+    <div class="safe"><b>A safe landing:</b> V no faster than -4.0, H within 2.0, and both feet on level ground.</div>
+  </div>
+</div></section>
+
+<section id="scoring"><div class="wrap twocol">
+  <div>
+    <h2>SCORING</h2>
+    <p class="hud" style="white-space:normal">(soft landing + time bonus) x pad x lander used</p>
+    <table style="margin-top:12px">
+      <tr><td>Soft landing</td><td>Up to 500, less for speed at touchdown</td></tr>
+      <tr><td>Time bonus</td><td>2000, less 50 for every second</td></tr>
+      <tr><td>Pad</td><td>x2 to x10; the narrowest pads pay most. Off a pad, x1</td></tr>
+      <tr><td>Lander used</td><td>1st full score, 2nd half, 3rd a quarter</td></tr>
+    </table>
+  </div>
+  <div>
+    <h2>LANDING SITES</h2>
+    <table>
+      <tr><th>Site</th><th>Level</th><th>Fuel</th><th>Pads</th></tr>
+      <tr><td>Tranquility Base<br><span class="muted">Apollo 11. Flat sea, slow drift</span></td><td class="diff-easy">EASY</td><td>800</td><td>x2 x3 x5</td></tr>
+      <tr><td>Fra Mauro<br><span class="muted">Apollo 14. Hills and boulders</span></td><td class="diff-med">MEDIUM</td><td>700</td><td>x3 x5 x7</td></tr>
+      <tr><td>Hadley Rille<br><span class="muted">Apollo 15. Mountains, fast drift</span></td><td class="diff-hard">HARD</td><td>650</td><td>x4 x7 x10</td></tr>
+    </table>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <div>Ryan Barrineau's Moon Mission {{VERSION}}. Source code, art tools and developer notes on <a href="{{REPO}}">GitHub</a>.</div>
+  <div>MS-DOS and GW-BASIC are trademarks of Microsoft; neither is included. The title credit uses the Dancing Script font (SIL Open Font License).</div>
+</div></footer>
+
+</body>
+</html>
