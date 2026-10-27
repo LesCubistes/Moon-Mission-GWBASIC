@@ -32,15 +32,18 @@ def smooth_noise(w, h, scale, seed):
     img = Image.fromarray((g * 255).astype(np.uint8)).resize(((w // scale + 3) * scale, (h // scale + 3) * scale), Image.BICUBIC)
     return np.asarray(img).astype(float)[:h, :w] / 255.0
 
-# horizon: gentle hills, dead flat where Earth comes up
+# horizon: gentle hills on a curved limb, dead flat where Earth comes up
 x = np.arange(320)
-hz = HT - 3 + 5 * np.sin(x / 37.0) + 3 * np.sin(x / 13.0 + 1.3) + 2 * np.sin(x / 5.3)
+hz = HT - 1 + 3 * np.sin(x / 37.0) + 2 * np.sin(x / 13.0 + 1.3) + 1.5 * np.sin(x / 5.3)
+SAG = 22                     # the Moon curves away: the horizon drops this much at the screen edges
+limb = HT + SAG * ((x - 159.5) / 160.0) ** 2   # smooth, no hills, under the Earth (never above HT)
+hz = hz + limb - HT
 lo, hi = EX - 6, EX + EW + 5
 for i in range(1, 15):
     t = i / 15
-    if lo - i >= 0: hz[lo - i] = HT * (1 - t) + hz[lo - i] * t
-    if hi + i < 320: hz[hi + i] = HT * (1 - t) + hz[hi + i] * t
-hz[lo:hi + 1] = HT
+    if lo - i >= 0: hz[lo - i] = limb[lo - i] * (1 - t) + hz[lo - i] * t
+    if hi + i < 320: hz[hi + i] = limb[hi + i] * (1 - t) + hz[hi + i] * t
+hz[lo:hi + 1] = limb[lo:hi + 1]
 hz = np.round(hz).astype(int)
 moon = yy >= hz[None, :]
 
