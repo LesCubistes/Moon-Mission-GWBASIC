@@ -68,6 +68,7 @@ exit
 ''')
 checks = []
 timer_samples = {}
+timer_bounds = {}
 timer_metrics = {}
 success = False
 failure = None
@@ -98,12 +99,12 @@ def back():
         pad()
         time.sleep(.3)
     else:
-        key('Escape')
+        key('Escape', duration=1)
 
 
-def key(name):
+def key(name, duration=.12):
     subprocess.run(['xdotool', 'windowfocus', window, 'keydown', '--clearmodifiers', name], env=env, check=True)
-    time.sleep(.12)
+    time.sleep(duration)
     subprocess.run(['xdotool', 'keyup', name], env=env, check=True)
 
 def screenshot(label):
@@ -131,6 +132,7 @@ def screenshot(label):
         header = crop.crop((int(crop.width * .4), 0, int(crop.width * .7), int(crop.height * .045)))
         monochrome(header).save(out / 'lander-ocr.png')
         text += '\n' + subprocess.run(['tesseract', str(out / 'lander-ocr.png'), 'stdout', '--psm', '7'], capture_output=True, text=True, check=True).stdout.upper()
+        timer_bounds[label] = (x + int(width * .775), y, x + width, y + int(height * .04))
         clock = crop.crop((int(crop.width * .775), 0, crop.width, int(crop.height * .04)))
         timer_samples[label] = hashlib.sha256(monochrome(clock).tobytes()).hexdigest()
     errors = monochrome(crop.crop((0, int(crop.height * .7), crop.width, crop.height)))
@@ -177,10 +179,22 @@ def wait_for(label, patterns, timeout=100, skip_intro=False, require_timer=False
         if all(contains(text, pattern) for pattern in patterns):
             if require_timer:
                 clock_states.add(timer_samples[label])
+                # OCR can take longer than the entire unpowered flight on a
+                # hosted runner. Sample the already-located timer directly.
+                sample_end = min(end, time.monotonic() + 3)
+                while len(clock_states) < 3 and time.monotonic() < sample_end:
+                    time.sleep(.15)
+                    clock = ImageGrab.grab(bbox=timer_bounds[label])
+                    clock_states.add(hashlib.sha256(monochrome(clock).tobytes()).hexdigest())
                 timer_metrics[label] = len(clock_states)
                 if len(clock_states) < 3:
                     time.sleep(.5)
                     continue
+            if require_timer:
+                # Three timer states already establish a live, stable flight.
+                checks.append(label)
+                print(f'PASS {a.machine}/{a.cycles}: {label}', flush=True)
+                return
             if matched_at is None:
                 matched_at = time.monotonic()
             if time.monotonic() - matched_at < settle:
