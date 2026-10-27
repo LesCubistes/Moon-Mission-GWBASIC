@@ -2,6 +2,7 @@
 20 REM Runs from the LUNAR LANDING disk (drive LD$, normally B:). Started by MOON on the START disk.
 25 REM Keypad: 8/5 throttle up/down, 0 or SPACE engine off, 7 9 4 6 1 2 3 thrusters
 30 COMMON SK%, LS%, LD$
+31 COMMON JE%, JX%, JY%, JH%, JV%, JB%, JQ!
 40 DEFINT A-Z: KEY OFF: RANDOMIZE TIMER
 50 REM -- every simple variable is created here, before any VARPTR/BLOAD --
 55 RP! = 0: T0! = 0: I = 0: OI = 0: Z = 0: DA = 0: XD = 0: DD = 0: CA! = 0: NS = 0: J = 0: K = 0: RO = 0: XF = 0: PN = 0: REM the cockpit replay loop's variables first: GW-BASIC finds early ones fastest
@@ -19,6 +20,9 @@
 112 LD$ = LD$ + "": SK% = SK%: LS% = LS%: REM create the COMMON ones too (LD$ is "" when run on its own: assets from the current drive)
 113 CS = 0: RI = 0: NR = 0: AW = 0: SN = 1: SB = 0: HP = 0: LL = 0: MX = -1: P$ = "": TY = 0: QB = 0: QS = 0: QM = 0: QF = 0
 114 DEF SEG = &HF000: TY = (PEEK(49152!) = &H21): DEF SEG: REM a Tandy 1000 needs its own palette registers set
+115 JE% = JE%: JX% = JX%: JY% = JY%: JH% = JH%: JV% = JV%: JB% = JB%: JQ! = 0
+116 JF% = 0: JA$ = "": JC% = 0: JD% = 0: JL% = 0: JU% = 0: JR% = 0: JW% = 0: JT% = 0: JK% = 0: JZ% = 0: JI% = 0
+117 IF JE% THEN STRIG ON
 120 DIM PR(9), RA(24), RD(24), RT(24), H(639), SP(146), MK(146), BG(146), F1(146), F2(146), F3(146)
 125 DIM Q1(146), Q2(146), Q3(146), Q4(146), Q6(146), Q7(146), Q9(146)
 127 DIM B2(172), FB(450), C1(172), C2(172), C3(172), C4(172), C5(172), C6(172), C7(172)
@@ -61,7 +65,9 @@
 250 T1! = TIMER: DT! = T1! - T0!: IF DT! < .05 AND DT! >= 0 THEN 250
 255 IF DT! > .3 OR DT! < 0 THEN DT! = .3
 260 T0! = T1!
-265 K$ = INKEY$: IF K$ = "" THEN 300
+265 K$ = INKEY$
+266 IF K$ = "" AND JE% THEN JF% = 0: GOSUB 6800: K$ = JA$
+267 IF K$ = "" THEN 300
 270 IF K$ = CHR$(0) + "K" OR K$ = "4" OR K$ = "7" OR K$ = "1" THEN BV! = BV! - 10: PF = 4: PT! = T1! + .2
 275 IF K$ = CHR$(0) + "M" OR K$ = "6" OR K$ = "9" OR K$ = "3" THEN BV! = BV! + 10: PF = 6: PT! = T1! + .2
 280 IF K$ = CHR$(0) + "P" OR K$ = "2" OR K$ = CHR$(13) THEN 400
@@ -132,7 +138,9 @@
 2010 T1! = TIMER: DT! = T1! - T0!: IF DT! < .05 AND DT! >= 0 THEN 2010
 2020 IF DT! > .3 OR DT! < 0 THEN DT! = .3
 2030 T0! = T1!: LK = 0
-2040 K$ = INKEY$: IF K$ = "" THEN 2100
+2040 K$ = INKEY$
+2042 IF K$ = "" AND JE% THEN JF% = 1: GOSUB 6800: K$ = JA$
+2044 IF K$ = "" THEN 2100
 2050 GOSUB 3000: IF Q THEN 200
 2060 GOTO 2040
 2100 A! = GR!
@@ -210,6 +218,7 @@
 2820 IF SN = 2 OR SB = 0 THEN X! = 288: VX! = 0: RETURN
 2822 SN = SN + 1: X! = X! - 284: GOTO 2800
 3000 REM ---- one key ----
+3005 IF K$ = "k" OR K$ = "K" THEN JE% = 0: STRIG OFF: RETURN
 3010 Q = 0: K = 0
 3020 IF LEN(K$) = 2 THEN K = INSTR("OPQKLMGHI", RIGHT$(K$, 1)): GOTO 3060
 3030 IF K$ = CHR$(27) THEN Q = 1: RETURN
@@ -254,7 +263,9 @@
 4260 LOCATE 22, 10: PRINT USING "SCORE          ######"; TS!;: PLAY "T200O5L16CEG>C8"
 4270 LOCATE 23, 15: PRINT "PRESS ENTER";
 4275 IF INKEY$ <> "" THEN 4275
-4280 GOSUB 4700: K$ = INKEY$: IF K$ <> CHR$(13) THEN 4280
+4280 GOSUB 4700: K$ = INKEY$
+4281 IF K$ = "" AND JE% THEN JF% = 0: GOSUB 6800: K$ = JA$
+4282 IF K$ <> CHR$(13) THEN 4280
 4285 GOTO 8000
 4295 SOUND 700, 1: GOSUB 7900: RETURN
 4400 REM ==== crashed: with landers left, a quick box and the next lander; the last one ends the level ====
@@ -265,7 +276,9 @@
 4420 LOCATE 12, 14: PRINT USING "LANDERS LEFT #"; 3 - LN;: LOCATE 13, 10: PRINT "ENTER=NEXT  ESC=ORBIT";
 4425 GOTO 4430
 4430 IF INKEY$ <> "" THEN 4430
-4440 GOSUB 4700: K$ = INKEY$: IF K$ = "" THEN 4440
+4440 GOSUB 4700: K$ = INKEY$
+4441 IF K$ = "" AND JE% THEN JF% = 0: GOSUB 6800: K$ = JA$
+4442 IF K$ = "" THEN 4440
 4445 IF K$ = CHR$(27) THEN 200
 4450 IF K$ <> CHR$(13) THEN 4440
 4455 IF LN < 3 THEN LN = LN + 1: GOTO 1000
@@ -358,6 +371,27 @@
 6150 IF F6 = 0 THEN F6 = 1: M$ = "60 SECONDS": MD! = 2.5: GOSUB 2500: SOUND 1000, 2: SOUND 32767, 1: SOUND 1000, 2: RETURN
 6155 IF F3 = 0 AND F! < F7! / 2 THEN F3 = 1: M$ = "30 SECONDS": MD! = 2.5: GOSUB 2500: SOUND 1200, 2: SOUND 32767, 1: SOUND 1200, 2
 6160 RETURN
+6800 REM ---- optional gameport: STICK(0) refreshes axes; menu buttons use rising edges ----
+6805 JA$ = "": IF JE% = 0 THEN RETURN
+6810 IF TIMER < JQ! THEN IF JQ! - TIMER < 1 THEN RETURN
+6815 JQ! = TIMER + .15: JC% = STICK(0): JD% = STICK(1)
+6820 REM zero is a valid full-travel axis reading; K always restores keyboard-only input
+6825 JZ% = 0: IF STRIG(1) THEN JZ% = JZ% OR 1
+6830 IF STRIG(5) THEN JZ% = JZ% OR 2
+6835 IF STRIG(3) THEN JZ% = JZ% OR 4
+6840 IF STRIG(7) THEN JZ% = JZ% OR 8
+6845 JI% = JZ% AND NOT JB%: JB% = JZ%: IF JF% THEN JI% = JZ%
+6850 IF JI% AND 8 THEN JA$ = CHR$(27): RETURN
+6855 IF JI% AND 4 THEN JA$ = " ": RETURN
+6860 IF JI% AND 2 THEN IF JF% THEN JA$ = "5": RETURN ELSE JA$ = CHR$(27): RETURN
+6865 IF JI% AND 1 THEN IF JF% THEN JA$ = "8": RETURN ELSE JA$ = CHR$(13): RETURN
+6870 JT% = 0: JK% = 0: IF JC% < JX% - JH% THEN JT% = -1 ELSE IF JC% > JX% + JH% THEN JT% = 1
+6875 IF JD% < JY% - JV% THEN JK% = -1 ELSE IF JD% > JY% + JV% THEN JK% = 1
+6880 IF JT% = 0 AND JK% = 0 THEN RETURN
+6885 IF JF% THEN IF JT% = 0 AND JK% = 1 THEN JA$ = "5": RETURN ELSE JA$ = CHR$(53 + JT% - 3 * JK%): RETURN
+6890 IF JK% < 0 THEN JA$ = CHR$(0) + "H": RETURN ELSE IF JK% > 0 THEN JA$ = CHR$(0) + "P": RETURN
+6895 IF JT% < 0 THEN JA$ = CHR$(0) + "K" ELSE JA$ = CHR$(0) + "M"
+6898 RETURN
 7000 REM ---- draw crash pose PZ centred on column CX, resting on ground row GC ----
 7010 IF PO THEN PUT (PX, PY), B2, PSET ELSE IF OX >= 0 THEN PUT (OX - 4, OY - 3), BG, PSET: OX = -1
 7020 PX = CX - 20: IF PX < 0 THEN PX = 0 ELSE IF PX > 280 THEN PX = 280
@@ -503,7 +537,9 @@
 8890 REM ---- one drive: ask for disk P$ in drive A: ----
 8900 LINE (16, 60)-(303, 107), 0, BF: LINE (16, 60)-(303, 107), 2, B: LOCATE 10, 21 - LEN(P$) \ 2: PRINT P$;: LOCATE 12, 7: PRINT "IN DRIVE A: AND PRESS A KEY";
 8905 SOUND 200, 3: IF INKEY$ <> "" THEN 8905
-8910 IF INKEY$ = "" THEN 8910
+8910 K$ = INKEY$
+8911 IF K$ = "" AND JE% THEN JF% = 0: GOSUB 6800: K$ = JA$
+8912 IF K$ = "" THEN 8910
 8915 RETURN
 8940 REM ---- display on, palette cyan / red / grey (CGA: the mode register's B/W bit). A Tandy 1000 picks palette registers 3, 4, 7 for that, so open its palette mask (it masks them to 0-3) and set them ----
 8950 OUT &H3D8, &HE: OUT &H3D9, 0: IF TY = 0 THEN RETURN

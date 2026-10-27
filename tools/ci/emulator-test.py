@@ -14,14 +14,15 @@ from PIL import Image, ImageGrab, ImageOps
 p = argparse.ArgumentParser()
 p.add_argument('--machine', choices=['cga', 'tandy', 'pcjr'], required=True)
 p.add_argument('--cycles', type=int, default=1200)
+p.add_argument('--gameport', action='store_true')
 a = p.parse_args()
 root = Path(__file__).resolve().parents[2]
-out = root / 'build/ci' / f'{a.machine}-{a.cycles}'
+out = root / 'build/ci' / (f'{a.machine}-{a.cycles}' + ('-gameport' if a.gameport else ''))
 out.mkdir(parents=True, exist_ok=True)
 # Extract each built image into isolated floppy-directory mounts. Classic DOSBox's
 # FAT image path is distinct from its directory path; this journey tests game files,
 # while mtools checks the built filesystem. Boot/BIOS tests remain separate.
-drives = root / 'build/ci-drives' / f'{a.machine}-{a.cycles}'
+drives = root / 'build/ci-drives' / (f'{a.machine}-{a.cycles}' + ('-gameport' if a.gameport else ''))
 if drives.exists():
     shutil.rmtree(drives)
 for image, directory in [('START.IMG', 'start'), ('LANDING.IMG', 'landing')]:
@@ -29,6 +30,12 @@ for image, directory in [('START.IMG', 'start'), ('LANDING.IMG', 'landing')]:
     target.mkdir(parents=True)
     subprocess.run(['mcopy', '-s', '-i', str(root / 'disks' / image), '::/*', str(target)], check=True)
 env = dict(os.environ, SDL_AUDIODRIVER='dummy')
+joystick = out / 'joystick.txt'
+if a.gameport:
+    joystick.write_text('0 0 0\n')
+    shim = out / 'virtual-gamepad.so'
+    subprocess.run(['gcc', '-shared', '-fPIC', '-O2', str(root / 'tools/ci/virtual-gamepad.c'), '-o', str(shim)], check=True)
+    env.update(LD_PRELOAD=str(shim), MOON_TEST_JOYSTICK=str(joystick))
 conf = out / 'dosbox.conf'
 conf.write_text(f'''[sdl]
 fullscreen=false
@@ -42,6 +49,8 @@ cycles=fixed {a.cycles}
 [render]
 aspect=false
 scaler=normal2x
+[joystick]
+joysticktype={"4axis" if a.gameport else "none"}
 [sblaster]
 sbtype=none
 [autoexec]
@@ -57,6 +66,32 @@ failure = None
 log = (out / 'emulator.log').open('w')
 proc = subprocess.Popen(['dosbox', '-conf', str(conf), '-noconsole'], env=env, stdout=log, stderr=log)
 window = None
+
+def pad(x=0, y=0, buttons=0):
+    temporary = joystick.with_suffix('.tmp')
+    temporary.write_text(f'{x} {y} {buttons}\n')
+    temporary.replace(joystick)
+
+
+def confirm():
+    if a.gameport:
+        pad(buttons=1)
+        time.sleep(1)
+        pad()
+        time.sleep(.3)
+    else:
+        key('Return')
+
+
+def back():
+    if a.gameport:
+        pad(buttons=8)
+        time.sleep(1)
+        pad()
+        time.sleep(.3)
+    else:
+        key('Escape')
+
 
 def key(name):
     subprocess.run(['xdotool', 'windowfocus', window, 'key', '--clearmodifiers', name], env=env, check=True)
@@ -80,7 +115,7 @@ def screenshot(label):
                'orbit': (0, 0, 1, .09), 'return-orbit': (0, 0, 1, .09),
                'flight': (0, 0, 1, .12), 'retry': (0, 0, 1, .12),
                'crash': (.2, .3, .8, .55)}
-    left, top, right, bottom = regions[label]
+    left, top, right, bottom = regions.get(label, (0, 0, 1, 1))
     gray = gray.crop((int(gray.width * left), int(gray.height * top),
                       int(gray.width * right), int(gray.height * bottom)))
     gray = ImageOps.expand(gray, border=40, fill=255)
@@ -138,7 +173,7 @@ def wait_for(label, patterns, timeout=100, leave_orbit=False):
             # header is still visible, never blindly send Escape at a menu.
             header = screenshot('return-orbit')
             if contains(header, 'SELECTLANDINGSITE'):
-                key('Escape')
+                back()
             next_back = time.monotonic() + 3
         time.sleep(1)
     raise AssertionError(f'Timed out waiting for {label}; see screenshot and OCR text')
@@ -155,19 +190,34 @@ try:
     wait_for('title', ['GRAPHICSSCENEREADY'])
     key('space')
     wait_for('menu', ['SELECTMISSION', 'MOONLANDING'])
-    key('Return')
-    wait_for('orbit', ['SELECTLANDINGSITE', 'DESCEND'])
-    key('Return')
+    if a.gameport:
+        key('j')
+        wait_for('setup-center', ['GAMEPORT', 'CENTER'])
+        pad()
+        key('Return')
+        wait_for('setup-up-left', ['HOLDUPLEFT'])
+        pad(-32767, -32767)
+        key('Return')
+        wait_for('setup-down-right', ['HOLDDOWNRIGHT'])
+        pad(32767, 32767)
+        key('Return')
+        wait_for('setup-enabled', ['GAMEPADENABLED'])
+        pad()
+        key('Return')
+        wait_for('setup-return', ['SELECTMISSION'])
+    confirm()
+    wait_for('orbit' , ['SELECTLANDINGSITE', 'DESCEND'])
+    confirm()
     wait_for('flight', ['ALT', 'LANDER', 'THR'])
     # An unpowered descent must reach the crash/report path rather than hang.
     wait_for('crash', ['LANDERSLEFT', 'ENTER'], timeout=120)
-    key('Return')
+    confirm()
     wait_for('retry', ['ALT', 'LANDER', 'THR'])
-    key('Escape')
+    back()
     wait_for('return-orbit', ['SELECTLANDINGSITE'])
-    key('Escape')
+    back()
     wait_for('return-menu', ['SELECTMISSION'], leave_orbit=True)
-    key('Escape')
+    back()
     try:
         proc.wait(timeout=20)
     except subprocess.TimeoutExpired:
@@ -188,4 +238,4 @@ finally:
             proc.kill()
             proc.wait()
     log.close()
-    (out / 'results.json').write_text(json.dumps({'machine': a.machine, 'cycles': a.cycles, 'success': success, 'failure': failure, 'passed': checks}, indent=2) + '\n')
+    (out / 'results.json').write_text(json.dumps({'machine': a.machine, 'cycles': a.cycles, 'gameport': a.gameport, 'success': success, 'failure': failure, 'passed': checks}, indent=2) + '\n')
