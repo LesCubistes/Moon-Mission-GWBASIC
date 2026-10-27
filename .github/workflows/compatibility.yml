@@ -27,6 +27,7 @@ jobs:
             machine: tandy
             cycles: 300
             input: keyboard
+            crash_return: true
           - profile: IBM-PCjr-proxy
             machine: pcjr
             cycles: 300
@@ -52,13 +53,15 @@ jobs:
           MACHINE: ${{ matrix.machine }}
           CYCLES: ${{ matrix.cycles }}
           INPUT_MODE: ${{ matrix.input }}
+          CRASH_RETURN: ${{ matrix.crash_return || false }}
         run: |
-          docker run --init --rm -e MACHINE -e CYCLES -e INPUT_MODE -v "$PWD:/workspace" moon-ci bash -euc '
+          docker run --init --rm -e MACHINE -e CYCLES -e INPUT_MODE -e CRASH_RETURN -v "$PWD:/workspace" moon-ci bash -euc '
             python3 tools/ci/prepare-runtime.py
             bash tools/mkdisk.sh
             python3 tools/ci/check-assembly.py
             args=(--machine "$MACHINE" --cycles "$CYCLES")
             if [[ "$INPUT_MODE" == gameport ]]; then args+=(--gameport); fi
+            if [[ "$CRASH_RETURN" == true ]]; then args+=(--crash-return); fi
             xvfb-run -a -s "-screen 0 1024x768x24" python3 tools/ci/emulator-test.py "${args[@]}"
           '
       - name: Save screenshots, OCR, logs and result manifest

@@ -17,15 +17,16 @@ p = argparse.ArgumentParser()
 p.add_argument('--machine', choices=['cga', 'tandy', 'pcjr'], required=True)
 p.add_argument('--cycles', type=int, default=1200)
 p.add_argument('--gameport', action='store_true')
+p.add_argument('--crash-return', action='store_true', help='Exercise crash-to-orbit then keypad navigation')
 p.add_argument('--runtime', type=Path, help='Optional alternate interpreter for OEM comparison')
 a = p.parse_args()
 root = Path(__file__).resolve().parents[2]
-out = root / 'build/ci' / (f'{a.machine}-{a.cycles}' + ('-gameport' if a.gameport else ''))
+out = root / 'build/ci' / (f'{a.machine}-{a.cycles}' + ('-gameport' if a.gameport else '') + ('-crash-return' if a.crash_return else ''))
 out.mkdir(parents=True, exist_ok=True)
 # Extract each built image into isolated floppy-directory mounts. Classic DOSBox's
 # FAT image path is distinct from its directory path; this journey tests game files,
 # while mtools checks the built filesystem. Boot/BIOS tests remain separate.
-drives = root / 'build/ci-drives' / (f'{a.machine}-{a.cycles}' + ('-gameport' if a.gameport else ''))
+drives = root / 'build/ci-drives' / (f'{a.machine}-{a.cycles}' + ('-gameport' if a.gameport else '') + ('-crash-return' if a.crash_return else ''))
 if drives.exists():
     shutil.rmtree(drives)
 for image, directory in [('START.IMG', 'start'), ('LANDING.IMG', 'landing')]:
@@ -119,7 +120,10 @@ def screenshot(label, diagnostics=False):
                'return-menu': (.225, .74, .775, .99),
                'orbit': (0, 0, 1, .09), 'return-orbit': (0, 0, 1, .09),
                'flight': (0, 0, 1, .12), 'retry': (0, 0, 1, .12),
-               'crash': (.2, .3, .8, .55)}
+               'crash': (.2, .3, .8, .55), 'second-crash': (.2, .3, .8, .55),
+               'orbit-right': (0, 0, 1, .09), 'orbit-left': (0, 0, 1, .09),
+               'first-keypad-right': (0, 0, 1, .09), 'first-arrow-right': (0, 0, 1, .09),
+               'return-keypad-right': (0, 0, 1, .09)}
     left, top, right, bottom = regions.get(label, (0, 0, 1, 1))
     region = crop.crop((int(crop.width * left), int(crop.height * top),
                         int(crop.width * right), int(crop.height * bottom)))
@@ -250,14 +254,29 @@ try:
         wait_for('setup-return', ['SELECTMISSION'])
     confirm()
     wait_for('orbit' , ['SELECTLANDINGSITE', 'DESCEND'])
+    if a.crash_return:
+        # Exercise the physical keypad key separately from an ASCII digit.
+        key('KP_Right')
+        wait_for('first-keypad-right', ['SELECTLANDINGSITE', 'DESCEND'])
+        key('Right')
+        wait_for('first-arrow-right', ['SELECTLANDINGSITE', 'DESCEND'])
     confirm()
     wait_for('flight', ['ALT', 'LANDER', 'THR'], require_timer=True)
     # An unpowered descent must reach the crash/report path rather than hang.
     wait_for('crash', ['LANDERSLEFT', 'ENTER'], timeout=120)
     confirm()
     wait_for('retry', ['ALT', 'LANDER2', 'THR'], require_timer=True)
+    if a.crash_return:
+        wait_for('second-crash', ['LANDERSLEFT', 'ENTER'], timeout=120)
     back()
     wait_for('return-orbit', ['SELECTLANDINGSITE'])
+    if a.crash_return:
+        key('KP_Right')
+        wait_for('return-keypad-right', ['SELECTLANDINGSITE', 'DESCEND'])
+        key('6')
+        wait_for('orbit-right', ['SELECTLANDINGSITE', 'DESCEND'])
+        key('4')
+        wait_for('orbit-left', ['SELECTLANDINGSITE', 'DESCEND'])
     back()
     wait_for('return-menu', ['SELECTMISSION'])
     back()
@@ -281,4 +300,4 @@ finally:
             proc.kill()
             proc.wait()
     log.close()
-    (out / 'results.json').write_text(json.dumps({'machine': a.machine, 'cycles': a.cycles, 'gameport': a.gameport, 'timer_states': timer_metrics, 'runtime_sha256': hashlib.sha256((drives / 'start/GWBASIC.EXE').read_bytes()).hexdigest(), 'success': success, 'failure': failure, 'passed': checks}, indent=2) + '\n')
+    (out / 'results.json').write_text(json.dumps({'machine': a.machine, 'cycles': a.cycles, 'gameport': a.gameport, 'crash_return': a.crash_return, 'timer_states': timer_metrics, 'runtime_sha256': hashlib.sha256((drives / 'start/GWBASIC.EXE').read_bytes()).hexdigest(), 'success': success, 'failure': failure, 'passed': checks}, indent=2) + '\n')
