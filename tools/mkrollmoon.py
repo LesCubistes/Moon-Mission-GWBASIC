@@ -1,19 +1,20 @@
-"""Preview: the title's earthrise with a rolling moonscape (the ground slides past, near faster than far).
+"""The title's earthrise over a rolling moonscape: the ground rolls toward the viewer, away from the Earth.
 
-Built the way the machine code would draw it, so the preview is honest:
-  - every screen row of ground is a pre-dithered strip that wraps; its length grows toward the
-    viewer (L = 256 * (r + R0) / R0), so one world texture lines up across all rows
-  - each frame every row is copied at its own offset (moves in 2-pixel steps, so only two
-    shifted copies of the strips would be stored)
-  - the hilly, curved skyline is a fixed mask; the Earth rises behind it
-usage: mkrollmoon.py BUILDDIR OUT.gif   (BUILDDIR holds MOONBG.PIC, EARTH.SPR, TITLE.SPR, CREDIT.SPR)
+The ground is one world texture that repeats every PZ in depth, pre-drawn (and pre-dithered, once for
+even and once for odd screen rows) in 10 depth bands, each at its own width scale. Every frame each
+screen row copies the texture row for its depth plus the distance travelled. The hilly, curved skyline
+is fixed: the rows with sky in them are combined through masks, so the stars and the rising Earth stay.
+Writes BUILDDIR/ROLL.DAT and ROLL.BIN (asm/roll.asm, assembled here with nasm) for MOON.BAS, and given OUT.gif a
+preview drawn by a Python copy of the machine code.
+usage: mkrollmoon.py BUILDDIR [OUT.gif]   (BUILDDIR holds MOONBG.PIC, EARTH.SPR, TITLE.SPR, CREDIT.SPR)
 """
 import sys, os, math, random, struct
 import numpy as np
 from PIL import Image
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-B, OUTGIF = sys.argv[1], sys.argv[2]
+B = sys.argv[1]
+OUTGIF = sys.argv[2] if len(sys.argv) > 2 else ""
 PAL = np.array([(0, 0, 0), (0, 170, 170), (170, 0, 0), (170, 170, 170)], np.uint8)
 BAYER = np.array([[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]) / 16.0
 W, H = 320, 200
@@ -105,41 +106,108 @@ for b in range(NB):
 mem = sum(b.shape[1] for b in bands) * 80 * 2
 print("ground rows", NR, "from y", Y0, "; bands", edges, "; texture bytes:", mem)
 
-# ---------- frames ----------
-bg = load_pic(f"{B}/MOONBG.PIC")
-sky = bg.copy()
-for c in range(W): sky[hz[c]:, c] = 0               # stars only
-earth = spr(f"{B}/EARTH.SPR")[:EH]
-title = spr(f"{B}/TITLE.SPR"); cred = spr(f"{B}/CREDIT.SPR")
-ground_mask = np.zeros((H, W), bool)
-for c in range(W): ground_mask[hz[c]:, c] = True
+# ---------- ROLL.DAT: the layout asm/roll.asm reads ----------
+SPEED = 0.6                                         # world depth per step (one step per clock tick, 18.2 a second)
+NM = int(hz.max()) - Y0 + 1                         # rows with some sky in them
+assert Y0 + NM <= 146, "part-sky rows must stay above the menu box"
+NB = len(bands)
+data = bytearray(0x1800)
+struct.pack_into("<4H", data, 0, NR, Y0, NM, NB)
+tex = bytearray(); taddr = []
+def pack(row):
+    b = (row[0::4] << 6) | (row[1::4] << 4) | (row[2::4] << 2) | row[3::4]
+    return b.astype(np.uint8).tobytes()
+for b, img in enumerate(bands):
+    hb = img.shape[1]
+    struct.pack_into("<3H", data, 0x40 + 8 * b, 0, int(round(SPEED * hb / PZ * 256)), hb * 256)
+    addr = []
+    for k in range(2):
+        addr.append(0x1800 + len(tex))
+        for j in range(hb): tex += pack(img[k, j])
+    taddr.append(addr)
+for r in range(NR):
+    b = band_of[r]; hb = bands[b].shape[1]
+    A = int(round(zw(r) * hb / PZ * 256)) % (hb * 256)
+    struct.pack_into("<4H", data, 0x100 + 8 * r, taddr[b][0], taddr[b][1], 0x40 + 8 * b, A)
+assert 0x100 + 8 * NR <= 0x400 and 0x400 + 240 * NM <= 0x1800
+for r in range(NM):
+    y = Y0 + r
+    sky_ = np.where(y < hz, 3, 0).astype(np.uint8)
+    gnd = np.where(y > hz, 3, 0).astype(np.uint8)
+    lip = np.where(y == hz, 3, 0).astype(np.uint8)
+    data[0x400 + 240 * r:0x400 + 240 * r + 240] = pack(sky_) + pack(gnd) + pack(lip)
+data += tex
+earth_spr = spr(f"{B}/EARTH.SPR")              # 82 rows: the Earth and two black rows that wipe its trail
+assert earth_spr.shape == (82, 96)
+struct.pack_into("<H", data, 0x3E, len(data))
+for row in earth_spr: data += pack(row)
+assert len(data) <= 65536 - 16, len(data)
+with open(f"{B}/ROLL.DAT", "wb") as fh:
+    fh.write(bytes([0xFD]) + struct.pack("<HHH", 0, 0, len(data)) + bytes(data) + b"\x1a")
+print("ROLL.DAT", len(data), "bytes; part-sky rows", NM)
+import subprocess, tempfile
+with tempfile.TemporaryDirectory() as td:            # assemble asm/roll.asm (needs nasm)
+    subprocess.run(["nasm", "-f", "bin", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "asm", "roll.asm"),
+                    "-o", f"{td}/roll.bin"], check=True)
+    code = open(f"{td}/roll.bin", "rb").read()
+assert len(code) <= 500, "ROLL.BIN must fit in RC(249) in MOON.BAS"
+code += b"\0" * (len(code) & 1)
+with open(f"{B}/ROLL.BIN", "wb") as fh:
+    fh.write(bytes([0xFD]) + struct.pack("<HHH", 0, 0, len(code)) + code + b"\x1a")
 
-FPS = 12
-frames = []
-T = 12 * FPS
-SPEED = 0.9                                         # world depth per frame (positive: the ground comes toward the viewer, away from the Earth)
-for f in range(T):
-    px = sky.copy()
-    t = f / FPS
-    # Earth rises from 1.5 s to 9 s, slowing as it tops out
-    k = min(1, max(0, (t - 1.5) / 7.5)); k = 1 - (1 - k) ** 2
-    ey = int(round(HT - (HT - EY) * k))
-    sub = px[ey:ey + EH, EX:EX + EW]
-    e = earth[:sub.shape[0]]
-    sub[e > 0] = e[e > 0]
-    # ground: each row copies the band texture row for its depth; the ground comes toward us
-    sd = f * SPEED
-    for r in range(NR):
-        y = Y0 + r
-        img = bands[band_of[r]]; hb = img.shape[1]
-        j = int(((zw(r) + sd) % PZ) * hb / PZ)
-        m = ground_mask[y]
-        px[y, m] = img[y & 1, j][m]
-    for c in range(W): px[hz[c], c] = 3            # the bright lip of the skyline stays put
-    if t > 9.5:
-        th, tw = title.shape; px[6:6 + th, 24:24 + tw][title > 0] = title[title > 0]
-        ch, cw = cred.shape; px[34:34 + ch, 216:216 + cw][cred > 0] = cred[cred > 0]
-    frames.append(Image.fromarray(PAL[px]).resize((640, 480), Image.NEAREST))
-frames[0].save(OUTGIF, save_all=True, append_images=frames[1:], duration=int(1000 / FPS), loop=0)
-frames[-1].save(OUTGIF.replace(".gif", ".png"))
-print("frames", len(frames))
+# ---------- a Python copy of the machine code, frame by frame ----------
+def unpack(bs):
+    a = np.frombuffer(bytes(bs), np.uint8)
+    return np.stack([a >> 6 & 3, a >> 4 & 3, a >> 2 & 3, a & 3], 1).ravel()
+
+def step(mem, scr, boxes, ey=-1, n=1):
+    """mem: bytearray ROLL.DAT image; scr: 200x320 pixels, changed in place"""
+    nr, y0, nm, nb = struct.unpack_from("<4H", mem, 0)
+    if ey >= 0:
+        ea = struct.unpack_from("<H", mem, 0x3E)[0]
+        for i in range(min(82, 126 - ey)):
+            scr[ey + i, 112:208] = unpack(mem[ea + 24 * i:ea + 24 * i + 24])
+    for b in [b for _ in range(n) for b in range(nb)]:
+        ph, st, top = struct.unpack_from("<3H", mem, 0x40 + 8 * b)
+        ph += st
+        if ph >= top: ph -= top
+        struct.pack_into("<H", mem, 0x40 + 8 * b, ph)
+    for r in range(nr):
+        y = y0 + r
+        c0, c1, bo, A = struct.unpack_from("<4H", mem, 0x100 + 8 * r)
+        ph, st, top = struct.unpack_from("<3H", mem, bo)
+        j = A + ph
+        if j >= top: j -= top
+        src = (c1 if y & 1 else c0) + (j >> 8) * 80
+        row = unpack(mem[src:src + 80])
+        if r < nm:
+            m = 0x400 + 240 * r
+            sk, gn, lp = (unpack(mem[m + 80 * i:m + 80 * i + 80]) for i in range(3))
+            scr[y] = (scr[y] & sk) | (row & gn) | lp
+        else:
+            keep = np.zeros(W, bool)
+            for (ya, yb, ba, bb) in boxes:
+                if ya <= y <= yb: keep[4 * ba:4 * bb] = True
+            scr[y, ~keep] = row[~keep]
+
+if OUTGIF:
+    bg = load_pic(f"{B}/MOONBG.PIC")
+    earth = spr(f"{B}/EARTH.SPR")[:EH]
+    title = spr(f"{B}/TITLE.SPR"); cred = spr(f"{B}/CREDIT.SPR")
+    mem = bytearray(data)
+    px = bg.copy()
+    FPS = 18
+    frames = []
+    for f in range(12 * FPS):
+        t = f / FPS
+        k = min(1, max(0, (t - 1.5) / 7.5)); k = 1 - (1 - k) ** 2
+        ey = int(round(HT - (HT - EY) * k))
+        step(mem, px, [], ey if ey < HT else -1)
+        out = px.copy()
+        if t > 9.5:
+            th, tw = title.shape; out[6:6 + th, 24:24 + tw][title > 0] = title[title > 0]
+            ch, cw = cred.shape; out[34:34 + ch, 216:216 + cw][cred > 0] = cred[cred > 0]
+        if f % 3 == 0: frames.append(Image.fromarray(PAL[out]).resize((640, 480), Image.NEAREST))
+    frames[0].save(OUTGIF, save_all=True, append_images=frames[1:], duration=int(3000 / FPS), loop=0)
+    frames[-1].save(OUTGIF.replace(".gif", ".png"))
+    print("frames", len(frames))

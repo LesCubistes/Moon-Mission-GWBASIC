@@ -25,7 +25,7 @@ for name, folder in [('MOON', start), ('LANDER', land)]:
     subprocess.run(['pcbasic', '--convert=b', str(source), str(folder / f'{name}.BAS')], check=True)
 for asset in (root / 'assets').iterdir():
     if asset.is_file():
-        folder = start if asset.name in {'MOONBG.PIC', 'EARTH.SPR', 'TITLE.SPR', 'CREDIT.SPR'} else land
+        folder = start if asset.name in {'MOONBG.PIC', 'EARTH.SPR', 'TITLE.SPR', 'CREDIT.SPR', 'ROLL.BIN', 'ROLL.DAT'} else land
         # Same obsolete art exclusions as the original floppy builder.
         if asset.name not in {'OFL.SPR', 'OLM.SPR', 'OLMK.SPR', 'WRECK.SPR', 'CRATER.SPR'}:
             shutil.copy2(asset, folder / asset.name)

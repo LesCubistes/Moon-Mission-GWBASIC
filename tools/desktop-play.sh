@@ -6,7 +6,7 @@ case "$machine" in cga|tandy) ;; *) echo 'Use cga or tandy' >&2; exit 2;; esac
 start="$root/build/desktop/start"
 landing="$root/build/desktop/landing"
 mkdir -p "$start" "$landing"
-cp "$root/src/MOON.BAS" "$root/assets/MOONBG.PIC" "$root/assets/EARTH.SPR" "$root/assets/TITLE.SPR" "$root/assets/CREDIT.SPR" "$start/"
+cp "$root/src/MOON.BAS" "$root/assets/MOONBG.PIC" "$root/assets/EARTH.SPR" "$root/assets/TITLE.SPR" "$root/assets/CREDIT.SPR" "$root/assets/ROLL.BIN" "$root/assets/ROLL.DAT" "$start/"
 cp "$root/src/LANDER.BAS" "$root"/assets/* "$landing/"
 if [[ -x "$root/build/venv/bin/pcbasic" ]]; then
     "$root/build/venv/bin/pcbasic" --convert=b "$root/src/MOON.BAS" "$start/MOON.BAS"

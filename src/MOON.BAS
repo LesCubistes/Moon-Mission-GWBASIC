@@ -1,5 +1,5 @@
 10 REM ==== MOON MISSION - START disk: title screen, high scores, mission menu ====
-20 REM Needs MOONBG.PIC, EARTH.SPR, TITLE.SPR here; each mission lives on its own disk in drive B:
+20 REM Needs MOONBG.PIC, EARTH.SPR, TITLE.SPR, CREDIT.SPR, ROLL.BIN, ROLL.DAT here; each mission lives on its own disk in drive B:
 25 COMMON SK%, LS%, LD$
 26 COMMON JE%, JX%, JY%, JH%, JV%, JB%, JQ!, JM%
 30 DEFINT A-Z: KEY OFF: CLS
@@ -7,14 +7,16 @@
 50 Y = 0: K = 0: S = 1: NM = 2: MI = 1: NMU = 0: A$ = "": DT! = .2: T0! = 0: KP = 0: HR = 0: HE = 0: I = 0: LD$ = "B:": P$ = "": TY = 0
 52 DEF SEG = &H40: I = PEEK(&H10): DEF SEG: IF (I AND &HC1) = 1 THEN LD$ = "A:": REM only one floppy drive: the mission disk goes in A: too
 53 DEF SEG = &HF000: TY = (PEEK(49152!) = &H21): DEF SEG: REM a Tandy 1000 needs its own palette registers set
-55 TS = 0: TW! = 0: TK = 0: NT = 0: SS = 0: SN! = 0: SPX = 0: SPY = 0: SDX = 0: J = 0
+55 TS = 0: TW! = 0: TK = 0: NT = 0: SS = 0: SN! = 0: SPX = 0: SPY = 0: SDX = 0: J = 0: RS = 0: RA! = 0: RT! = 0: RN = 0
 57 JE% = JE%: JX% = JX%: JY% = JY%: JH% = JH%: JV% = JV%: JB% = JB%: JQ! = 0: JM% = JM%
 58 JF% = 0: JA$ = "": JC% = 0: JD% = 0: JL% = 0: JU% = 0: JR% = 0: JW% = 0: JT% = 0: JK% = 0: JZ% = 0: JI% = 0
 60 DIM E(986), T(681), CR(376), M$(2), MU$(12), HB(4100), HN$(10), HS!(10), HL$(10)
-65 DIM TX(16), TY(16), TC(16), QX(3), QY(3), QC(3)
+65 DIM TX(16), TY(16), TC(16), QX(3), QY(3), QC(3), PR(11), RC(249)
 70 M$(1) = "MOON LANDING": M$(2) = "EXIT TO DOS"
 80 GOSUB 5000
 85 RESTORE 9600: READ NT: FOR I = 1 TO NT: READ TX(I), TY(I), TC(I): NEXT I: QX(1) = -1: QX(2) = -1: QX(3) = -1: SN! = TIMER + 5
+90 REM ---- rolling moonscape: 64K from DOS for the ground (ROLL.DAT); without it the Moon stands still ----
+92 PR(0) = 0: RA! = VARPTR(RC(0)): BLOAD "ROLL.BIN", RA!: CALL RA!(PR(0)): RS = PR(1): IF RS THEN DEF SEG = RS: BLOAD "ROLL.DAT", 0: DEF SEG
 100 REM ---- load art with the display switched off ----
 110 SCREEN 1, 0: COLOR 0, 1: CLS
 120 OUT &H3D8, &H6
@@ -22,30 +24,31 @@
 140 BLOAD "EARTH.SPR", VARPTR(E(0))
 150 BLOAD "TITLE.SPR", VARPTR(T(0))
 155 BLOAD "CREDIT.SPR", VARPTR(CR(0))
-170 GOSUB 8950
+170 PR(3) = -1: PR(7) = -1: PR(10) = -1: GOSUB 8950
 180 IF SK% = 1 THEN MI = NMU + 1: GOTO 400
-200 REM ---- earthrise: draw only the rows above the horizon ----
+200 REM ---- earthrise: draw only the rows above the horizon (with the rolling ground, ROLL.BIN draws it) ----
+205 IF INKEY$ <> "" THEN 205: REM ignore keys pressed while the art was loading
 210 GOSUB 900
 220 T0! = TIMER
 230 FOR K = 1 TO HT - EY
 240 Y = HT - K
 250 IF K < SH THEN E(1) = K ELSE E(1) = SH
-255 PUT (EX, Y), E, PSET
-260 GOSUB 900: GOSUB 950
+255 IF RS THEN PR(10) = Y ELSE PUT (EX, Y), E, PSET
+260 GOSUB 900: GOSUB 950: GOSUB 940
 270 IF INKEY$ <> "" THEN KP = 1: GOTO 400
 280 IF TIMER < T0! + K * DT! THEN GOTO 260
 290 NEXT K
 400 REM ---- title; once the music ends show high scores; then the menu ----
-405 GOSUB 990
+405 PR(10) = -1: GOSUB 990
 410 LINE (EX, EY)-(EX + 95, HT - 1), 0, BF: E(1) = SH: PUT (EX, EY), E, PSET
 420 PUT (24, 6), T, PSET: PUT (216, 34), CR, PSET: REM "by Ryan Barrineau" under the title
 425 IF SK% <> 1 AND KP = 0 THEN GOSUB 1000
-430 LINE (72, 146)-(247, 197), 0, BF: LINE (72, 146)-(247, 197), 1, B
+430 PR(2) = 146: PR(3) = 197: PR(4) = 18: PR(5) = 62: PR(6) = 176: PR(7) = 199: PR(8) = 0: PR(9) = 16: LINE (72, 146)-(247, 197), 0, BF: LINE (72, 146)-(247, 197), 1, B
 440 LOCATE 20, 12: PRINT "- SELECT MISSION -";
 450 FOR K = 1 TO NM: LOCATE 20 + 2 * K, 15: PRINT M$(K);: NEXT K
 460 GOSUB 600
 465 GOSUB 6900
-470 GOSUB 900: GOSUB 950: A$ = INKEY$
+470 GOSUB 900: GOSUB 950: GOSUB 940: A$ = INKEY$
 472 IF A$ = "" AND JE% THEN JF% = 0: GOSUB 6800: A$ = JA$
 474 IF A$ = "" THEN 470
 476 IF A$ = "j" OR A$ = "J" THEN GOSUB 6500: SK% = 1: GOTO 100
@@ -62,21 +65,25 @@
 630 NEXT K: RETURN
 700 REM ---- moon landing: load the level from the LUNAR LANDING disk (drive B:, or A: when there is only one drive) ----
 705 IF LD$ = "A:" THEN P$ = "INSERT THE LUNAR LANDING DISK": GOSUB 780: IF A$ = CHR$(27) THEN 470
-710 ON ERROR GOTO 750: CHAIN LD$ + "LANDER"
+710 GOSUB 945: ON ERROR GOTO 750: CHAIN LD$ + "LANDER"
 750 RESUME 755
 755 ON ERROR GOTO 0: P$ = "LUNAR LANDING DISK NOT FOUND": GOSUB 780: IF A$ = CHR$(27) THEN 470 ELSE 710
 780 GET (16, 60)-(303, 107), HB: LINE (16, 60)-(303, 107), 0, BF: LINE (16, 60)-(303, 107), 2, B: LOCATE 10, 21 - LEN(P$) \ 2: PRINT P$;
 782 LOCATE 12, 7: PRINT "IN DRIVE "; LD$; " AND PRESS A KEY";: LOCATE 13, 14: PRINT "(ESC = CANCEL)";
 785 SOUND 200, 3: A$ = INKEY$: IF A$ <> "" THEN 785
-790 GOSUB 900: A$ = INKEY$
+790 GOSUB 900: GOSUB 940: A$ = INKEY$
 791 IF A$ = "" AND JE% THEN JF% = 0: GOSUB 6800: A$ = JA$
 792 IF A$ = "" THEN 790
 795 PUT (16, 60), HB, PSET: RETURN
 800 REM ---- exit ----
-810 SCREEN 0, 0: WIDTH 80: SYSTEM
+810 GOSUB 945: SCREEN 0, 0: WIDTH 80: SYSTEM
 900 REM ---- feed music a few notes at a time so PLAY never blocks ----
 910 IF MI <= NMU THEN IF PLAY(0) < 4 THEN PLAY MU$(MI): MI = MI + 1
 920 RETURN
+940 IF RS = 0 OR TIMER = RT! THEN RETURN ELSE RN = 1: IF TIMER > RT! AND TIMER < RT! + .35 THEN RN = INT((TIMER - RT!) * 18.2 + .5)
+942 RT! = TIMER: PR(0) = 1: PR(1) = RS: PR(11) = RN: RA! = VARPTR(RC(0)): CALL RA!(PR(0)): RETURN: REM the ground rolls one step per clock tick
+945 IF RS THEN PR(0) = 3: PR(1) = RS: RA! = VARPTR(RC(0)): CALL RA!(PR(0)): RS = 0: REM give the 64K back before CHAIN or SYSTEM
+946 RETURN
 950 REM ---- life on the title: stars twinkle, now and then a shooting star streaks past ----
 952 IF TIMER < TW! THEN RETURN
 954 TW! = TIMER + .06: IF SS THEN GOSUB 970 ELSE IF TIMER > SN! THEN GOSUB 965
@@ -95,7 +102,7 @@
 994 NEXT J: IF TS THEN PSET (TX(TS), TY(TS)), TC(TS): TS = 0
 996 SS = 0: SN! = TIMER + 6: RETURN
 1000 REM ---- attract: wait for the music to finish, show high scores ~6 s ----
-1010 GOSUB 900: GOSUB 950: IF INKEY$ <> "" THEN RETURN
+1010 GOSUB 900: GOSUB 950: GOSUB 940: IF INKEY$ <> "" THEN RETURN
 1020 IF MI <= NMU OR PLAY(0) > 0 THEN 1010
 1030 T0! = TIMER + 1
 1035 IF INKEY$ <> "" THEN RETURN ELSE IF TIMER < T0! THEN 1035

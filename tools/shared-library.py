@@ -117,7 +117,7 @@ def play(library, cycles):
         for directory in [start, landing]:
             directory.mkdir(parents=True, exist_ok=True)
         shutil.copytree(version / 'assets', landing, dirs_exist_ok=True)
-        for name in ['MOONBG.PIC', 'EARTH.SPR', 'TITLE.SPR', 'CREDIT.SPR']:
+        for name in ['MOONBG.PIC', 'EARTH.SPR', 'TITLE.SPR', 'CREDIT.SPR', 'ROLL.BIN', 'ROLL.DAT']:
             shutil.copy2(version / 'assets' / name, start / name)
         shutil.copy2(version / 'src/MOON.BAS', start / 'MOON.BAS')
         shutil.copy2(version / 'src/LANDER.BAS', landing / 'LANDER.BAS')

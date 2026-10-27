@@ -39,7 +39,7 @@ for f in $(mdir -i "$START" -b ::/ | sed 's#^::/##'); do
 done
 mattrib -i "$START" +r +h +s ::/IO.SYS ::/MSDOS.SYS
 mcopy -o -i "$START" "$R/dos/GWBASIC.EXE" "$R/build/tok/MOON.BAS" "$R/assets/MOONBG.PIC" \
-      "$R/assets/EARTH.SPR" "$R/assets/TITLE.SPR" "$R/assets/CREDIT.SPR" "$T/GO.BAT" "$T/AUTOEXEC.BAT" $EXTRA ::/
+      "$R/assets/EARTH.SPR" "$R/assets/TITLE.SPR" "$R/assets/CREDIT.SPR" "$R/assets/ROLL.BIN" "$R/assets/ROLL.DAT" "$T/GO.BAT" "$T/AUTOEXEC.BAT" $EXTRA ::/
 mlabel -i "$START" ::MOONSTART
 echo "START:   $(mdir -i "$START" ::/ | grep free | xargs)"
 
@@ -47,7 +47,7 @@ echo "START:   $(mdir -i "$START" ::/ | grep free | xargs)"
 rm -f "$LAND"
 dd if=/dev/zero of="$LAND" bs=1024 count=360 2>/dev/null
 mformat -i "$LAND" -f 360 -v LUNARLAND ::
-LEVEL=$(ls "$R"/assets/*.PIC "$R"/assets/*.SPR "$R"/assets/*.MAP "$R"/assets/*.DAT "$R"/assets/*.RLE "$R"/assets/CKPIT.BIN | grep -v -E '/(MOONBG\.PIC|EARTH\.SPR|TITLE\.SPR|CREDIT\.SPR|OFL\.SPR|OLM\.SPR|OLMK\.SPR|WRECK\.SPR|CRATER\.SPR)$')
+LEVEL=$(ls "$R"/assets/*.PIC "$R"/assets/*.SPR "$R"/assets/*.MAP "$R"/assets/*.DAT "$R"/assets/*.RLE "$R"/assets/CKPIT.BIN | grep -v -E '/(MOONBG\.PIC|EARTH\.SPR|TITLE\.SPR|CREDIT\.SPR|ROLL\.DAT|OFL\.SPR|OLM\.SPR|OLMK\.SPR|WRECK\.SPR|CRATER\.SPR)$')
 mcopy -o -i "$LAND" "$R/build/tok/LANDER.BAS" $LEVEL ::/
 echo "LANDING: $(mdir -i "$LAND" ::/ | grep free | xargs)"
 rm -rf "$T"
