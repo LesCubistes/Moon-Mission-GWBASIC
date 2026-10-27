@@ -99,7 +99,7 @@ def back():
         pad()
         time.sleep(.3)
     else:
-        key('Escape', duration=1)
+        key('Escape')
 
 
 def key(name, duration=.12):
