@@ -50,7 +50,7 @@
 192 BLOAD LD$ + "CM6.SPR", VARPTR(M6(0)): BLOAD LD$ + "CM7.SPR", VARPTR(M7(0))
 193 BLOAD LD$ + "BRAKE.SPR", VARPTR(BK(0)): REM braking burn cutscene: 4 poses x ship, mask, flame (74 ints each)
 194 BLOAD LD$ + "DU1.SPR", VARPTR(D1(0)): BLOAD LD$ + "DU2.SPR", VARPTR(D2(0)): BLOAD LD$ + "DU3.SPR", VARPTR(D3(0))
-195 SCREEN 1, 0: COLOR 0, 1: PLAY "MB"
+195 SCREEN 1, 0: COLOR 0, 1: PLAY "MB": GOSUB 8950: LOCATE 13, 16: PRINT "LOADING...";
 196 BLOAD LD$ + "DU4.SPR", VARPTR(D4(0)): BLOAD LD$ + "DU5.SPR", VARPTR(D5(0)): BLOAD LD$ + "DU6.SPR", VARPTR(D6(0))
 197 BLOAD LD$ + "CKPIT.BIN", VARPTR(MC(0)): CA! = VARPTR(MC(0)): PR(0) = 0: CALL CA!(PR(0)): CS = PR(1): PR(0) = 1
 198 IF CS THEN DEF SEG = CS: BLOAD LD$ + "CKCOM.DAT", 49408!: DEF SEG: REM 64K from DOS for the cockpit view scenery
@@ -72,7 +72,7 @@
 275 IF K$ = CHR$(0) + "M" OR K$ = "6" OR K$ = "9" OR K$ = "3" THEN BV! = BV! + 10: PF = 6: PT! = T1! + .2
 280 IF K$ = CHR$(0) + "P" OR K$ = "2" OR K$ = CHR$(13) THEN 400
 285 IF K$ = CHR$(27) THEN SK% = 1: PR(0) = 3: PR(1) = SB: CALL CA!(PR(0)): PR(1) = CS: CALL CA!(PR(0)): IF LD$ = "A:" THEN P$ = "INSERT THE START DISK": GOSUB 8900
-286 IF K$ = CHR$(27) THEN GOSUB 8960: ON ERROR GOTO 8800: CHAIN "MOON"
+286 IF K$ = CHR$(27) THEN LINE (0, 16)-(319, 23), 0, BF: LOCATE 3, 16: PRINT "LOADING...";: GOSUB 8960: ON ERROR GOTO 8800: CHAIN "MOON"
 290 GOTO 265
 300 IF BV! > 60 THEN BV! = 60 ELSE IF BV! < -60 THEN BV! = -60
 305 BV! = BV! * (1 - .6 * DT!): BX! = BX! + BV! * DT!
@@ -96,7 +96,7 @@
 440 IF INKEY$ <> "" THEN 440
 445 GOSUB 1200: GOTO 1000
 1000 REM ==== load and start the level ====
-1010 OUT &H3D8, &H6: CLS
+1010 OUT &H3D8, &H6: CLS: IF SB THEN IF LL <> LV THEN LOCATE 13, 16: PRINT "LOADING...";: GOSUB 8950
 1015 ON LV GOSUB 8700, 8710, 8720: READ PC$, MP$, X!, Y!, VX!, VY!, FM!, NP: FOR I = 1 TO NP: READ LA(I), LB(I), LM(I): NEXT I
 1020 IF SB = 0 THEN DEF SEG = &HB800: BLOAD LD$ + PC$, 0: DEF SEG: BLOAD LD$ + MP$, VARPTR(H(0)): GOTO 1050
 1025 IF LL <> LV THEN GOSUB 1100
@@ -109,6 +109,7 @@
 1092 TL = -1: LF! = 0: F7! = FM! * .15: CXM = 8 + INT(RND * 40): MV! = 0: CM = 0: SD = 0: CL = 0: F6 = 0: F3 = 0: A12! = 0: G12! = 0: IF RND < .15 THEN A12! = T0! + 4 + RND * 8
 1093 NR = 0: RI = 0: REM the flight recorder: last 25 samples, 0.4 s apart
 1094 GOSUB 2620
+1095 IF INKEY$ <> "" THEN 1095: REM ignore keys pressed while the site was loading
 1096 GOTO 2000
 1100 REM ---- the site and the danger screens either side, into memory once per site (slots 0 left, 1 site, 2 right) ----
 1102 DEF SEG = SB: BLOAD LD$ + PC$, 16384: BLOAD LD$ + MP$, 50432!: C$ = LEFT$(PC$, LEN(PC$) - 4)
@@ -117,9 +118,10 @@
 1108 DEF SEG = SB: BLOAD LD$ + C$ + "R.RLE", 53248!: DEF SEG: PR(0) = 6: PR(2) = 2: CALL CA!(PR(0)): LL = LV: RETURN
 1200 REM ==== braking burn: from orbit down toward the site, hands off (any key skips), no fuel used ====
 1202 IF SB = 0 THEN RETURN
-1204 OUT &H3D8, &H6: DEF SEG = SB: BLOAD LD$ + "BRAKE.RLE", 53248!: DEF SEG: PR(0) = 6: PR(1) = SB: PR(2) = -1: PR(3) = -12288: CALL CA!(PR(0))
+1204 LINE (0, 16)-(319, 23), 0, BF: LOCATE 3, 16: PRINT "LOADING...";: OUT &H3D8, &H6: DEF SEG = SB: BLOAD LD$ + "BRAKE.RLE", 53248!: DEF SEG: PR(0) = 6: PR(1) = SB: PR(2) = -1: PR(3) = -12288: CALL CA!(PR(0))
 1205 RP! = VARPTR(KF(0)): QF = RP! + 65536! * (RP! > 32767)
 1206 GOSUB 8950: LOCATE 3, 21 - LEN(SN$(LV)) \ 2: PRINT SN$(LV);: M$ = "POWERED DESCENT": GOSUB 1250: OX = -1: J = -1: PN = 0: T0! = TIMER
+1207 IF INKEY$ <> "" THEN 1207: REM ignore keys pressed while the scene was loading, so it is not skipped by accident
 1210 RP! = (TIMER - T0!) / 5: IF RP! > 1 OR INKEY$ <> "" THEN 1240
 1212 XI = 12 + INT(210 * (1 - (1 - RP!) ^ 2)): YI = 40 + INT(36 * RP! * RP!): K = 0: IF RP! > .5 THEN K = INT((RP! - .5) * 8) + 1: IF K > 3 THEN K = 3
 1214 IF K <> J THEN J = K: GOSUB 1230

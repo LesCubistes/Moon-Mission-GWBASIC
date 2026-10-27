@@ -16,6 +16,7 @@
 80 GOSUB 5000
 85 RESTORE 9600: READ NT: FOR I = 1 TO NT: READ TX(I), TY(I), TC(I): NEXT I: QX(1) = -1: QX(2) = -1: QX(3) = -1: SN! = TIMER + 5
 90 REM ---- rolling moonscape: 64K from DOS for the ground (ROLL.DAT); without it the Moon stands still ----
+91 SCREEN 1, 0: COLOR 0, 1: LOCATE 13, 16: PRINT "LOADING...";
 92 PR(0) = 0: RA! = VARPTR(RC(0)): BLOAD "ROLL.BIN", RA!: CALL RA!(PR(0)): RS = PR(1): IF RS THEN DEF SEG = RS: BLOAD "ROLL.DAT", 0: DEF SEG
 100 REM ---- load art with the display switched off ----
 110 SCREEN 1, 0: COLOR 0, 1: CLS
@@ -25,6 +26,7 @@
 150 BLOAD "TITLE.SPR", VARPTR(T(0))
 155 BLOAD "CREDIT.SPR", VARPTR(CR(0))
 170 PR(3) = -1: PR(7) = -1: PR(10) = -1: GOSUB 8950
+175 IF INKEY$ <> "" THEN 175: REM ignore keys pressed while loading
 180 IF SK% = 1 THEN MI = NMU + 1: GOTO 400
 200 REM ---- earthrise: draw only the rows above the horizon (with the rolling ground, ROLL.BIN draws it) ----
 205 IF INKEY$ <> "" THEN 205: REM ignore keys pressed while the art was loading
@@ -65,9 +67,9 @@
 630 NEXT K: RETURN
 700 REM ---- moon landing: load the level from the LUNAR LANDING disk (drive B:, or A: when there is only one drive) ----
 705 IF LD$ = "A:" THEN P$ = "INSERT THE LUNAR LANDING DISK": GOSUB 780: IF A$ = CHR$(27) THEN 470
-710 GOSUB 945: ON ERROR GOTO 750: CHAIN LD$ + "LANDER"
+710 GOSUB 945: LINE (73, 147)-(246, 196), 0, BF: LOCATE 22, 16: PRINT "LOADING...";: ON ERROR GOTO 750: CHAIN LD$ + "LANDER"
 750 RESUME 755
-755 ON ERROR GOTO 0: P$ = "LUNAR LANDING DISK NOT FOUND": GOSUB 780: IF A$ = CHR$(27) THEN 470 ELSE 710
+755 ON ERROR GOTO 0: P$ = "LUNAR LANDING DISK NOT FOUND": GOSUB 780: IF A$ = CHR$(27) THEN 430 ELSE 710
 780 GET (16, 60)-(303, 107), HB: LINE (16, 60)-(303, 107), 0, BF: LINE (16, 60)-(303, 107), 2, B: LOCATE 10, 21 - LEN(P$) \ 2: PRINT P$;
 782 LOCATE 12, 7: PRINT "IN DRIVE "; LD$; " AND PRESS A KEY";: LOCATE 13, 14: PRINT "(ESC = CANCEL)";
 785 SOUND 200, 3: A$ = INKEY$: IF A$ <> "" THEN 785
