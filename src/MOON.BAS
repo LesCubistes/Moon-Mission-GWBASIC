@@ -110,7 +110,7 @@
 5050 DATA "O2L8CO1GO2CO1G", "O2CO1GO2CO1GO2C4"
 5060 DATA "O3L4C2G2O4C2.", "A1B4O5C1."
 6500 REM ---- opt-in Gravis/standard gameport calibration; no reads while keyboard-only ----
-6505 JE% = 0: STRIG ON: SCREEN 0, 0: WIDTH 40: CLS
+6505 JE% = 0: STRIG ON: SCREEN 0, 0: WIDTH 40: COLOR 7, 0: CLS
 6510 PRINT "GAMEPORT GAMEPAD SETUP": PRINT: PRINT "Use the standard 2/4-button mode.": PRINT "Keyboard ESC cancels setup.": PRINT
 6515 PRINT "Release the direction pad.": PRINT "Press ENTER to sample center."
 6520 GOSUB 6760: IF JA$ = CHR$(27) THEN 6740
@@ -130,7 +130,9 @@
 6590 PRINT "Yellow C: engine off": PRINT "Green D: back to orbit/menu"
 6595 PRINT "D-pad: menus / flight keypad": PRINT "Release pad; ENTER to return."
 6600 GOSUB 6760: RETURN
-6720 PRINT: PRINT "No usable calibrated gameport found.": PRINT "Check port, pad mode and directions.": PRINT "Keyboard controls remain active.": PRINT "Press ENTER."
+6720 PRINT: PRINT "No usable calibrated gameport found.": PRINT "Check port, pad mode and directions."
+6721 PRINT "CENTER "; JX%; JY%: PRINT "UP-LEFT "; JL%; JU%: PRINT "DOWN-RIGHT "; JR%; JW%
+6722 PRINT "Keyboard controls remain active.": PRINT "Press ENTER."
 6725 GOSUB 6760
 6740 JE% = 0: STRIG OFF: RETURN
 6760 JA$ = INKEY$: IF JA$ <> "" THEN 6760

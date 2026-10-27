@@ -3,18 +3,21 @@
 import argparse
 from difflib import SequenceMatcher
 import json
+import hashlib
 import os
 from pathlib import Path
 import re
 import shutil
 import subprocess
 import time
-from PIL import Image, ImageGrab, ImageOps
+from PIL import Image, ImageGrab
+from screen_ocr import monochrome
 
 p = argparse.ArgumentParser()
 p.add_argument('--machine', choices=['cga', 'tandy', 'pcjr'], required=True)
 p.add_argument('--cycles', type=int, default=1200)
 p.add_argument('--gameport', action='store_true')
+p.add_argument('--runtime', type=Path, help='Optional alternate interpreter for OEM comparison')
 a = p.parse_args()
 root = Path(__file__).resolve().parents[2]
 out = root / 'build/ci' / (f'{a.machine}-{a.cycles}' + ('-gameport' if a.gameport else ''))
@@ -29,6 +32,8 @@ for image, directory in [('START.IMG', 'start'), ('LANDING.IMG', 'landing')]:
     target = drives / directory
     target.mkdir(parents=True)
     subprocess.run(['mcopy', '-s', '-i', str(root / 'disks' / image), '::/*', str(target)], check=True)
+if a.runtime:
+    shutil.copy2(a.runtime, drives / 'start/GWBASIC.EXE')
 env = dict(os.environ, SDL_AUDIODRIVER='dummy')
 joystick = out / 'joystick.txt'
 if a.gameport:
@@ -51,6 +56,7 @@ aspect=false
 scaler=normal2x
 [joystick]
 joysticktype={"4axis" if a.gameport else "none"}
+timed=false
 [sblaster]
 sbtype=none
 [autoexec]
@@ -61,6 +67,9 @@ gwbasic moon
 exit
 ''')
 checks = []
+timer_samples = {}
+timer_bounds = {}
+timer_metrics = {}
 success = False
 failure = None
 log = (out / 'emulator.log').open('w')
@@ -93,8 +102,10 @@ def back():
         key('Escape')
 
 
-def key(name):
-    subprocess.run(['xdotool', 'windowfocus', window, 'key', '--clearmodifiers', name], env=env, check=True)
+def key(name, duration=.12):
+    subprocess.run(['xdotool', 'windowfocus', window, 'keydown', '--clearmodifiers', name], env=env, check=True)
+    time.sleep(duration)
+    subprocess.run(['xdotool', 'keyup', name], env=env, check=True)
 
 def screenshot(label):
     image = ImageGrab.grab()
@@ -104,25 +115,27 @@ def screenshot(label):
     g = dict(line.split('=', 1) for line in geometry.splitlines() if '=' in line)
     x, y, width, height = (int(g[k]) for k in ['X', 'Y', 'WIDTH', 'HEIGHT'])
     crop = image.crop((x, y, x + width, y + height))
-    crop = crop.resize((width * 3, height * 3), Image.Resampling.NEAREST)
-    channels = crop.convert('RGB').split()
-    from PIL import ImageChops
-    bright = ImageChops.lighter(ImageChops.lighter(channels[0], channels[1]), channels[2])
-    gray = bright.point(lambda x: 0 if x > 80 else 255)
-    full_gray = gray
     regions = {'title': (0, 0, 1, .4), 'menu': (.225, .74, .775, .99),
                'return-menu': (.225, .74, .775, .99),
                'orbit': (0, 0, 1, .09), 'return-orbit': (0, 0, 1, .09),
                'flight': (0, 0, 1, .12), 'retry': (0, 0, 1, .12),
                'crash': (.2, .3, .8, .55)}
     left, top, right, bottom = regions.get(label, (0, 0, 1, 1))
-    gray = gray.crop((int(gray.width * left), int(gray.height * top),
-                      int(gray.width * right), int(gray.height * bottom)))
-    gray = ImageOps.expand(gray, border=40, fill=255)
+    region = crop.crop((int(crop.width * left), int(crop.height * top),
+                        int(crop.width * right), int(crop.height * bottom)))
+    gray = monochrome(region)
     gray.save(out / 'ocr.png')
     result = subprocess.run(['tesseract', str(out / 'ocr.png'), 'stdout', '--psm', '6'], capture_output=True, text=True, check=True)
     text = result.stdout.upper()
-    errors = ImageOps.expand(full_gray.crop((0, int(full_gray.height * .7), full_gray.width, full_gray.height)), border=40, fill=255)
+    if label in {'flight', 'retry'}:
+        # Read the lander counter separately from the adjacent fuel-gauge border.
+        header = crop.crop((int(crop.width * .4), 0, int(crop.width * .7), int(crop.height * .045)))
+        monochrome(header).save(out / 'lander-ocr.png')
+        text += '\n' + subprocess.run(['tesseract', str(out / 'lander-ocr.png'), 'stdout', '--psm', '7'], capture_output=True, text=True, check=True).stdout.upper()
+        timer_bounds[label] = (x + int(width * .775), y, x + width, y + int(height * .04))
+        clock = crop.crop((int(crop.width * .775), 0, crop.width, int(crop.height * .04)))
+        timer_samples[label] = hashlib.sha256(monochrome(clock).tobytes()).hexdigest()
+    errors = monochrome(crop.crop((0, int(crop.height * .7), crop.width, crop.height)))
     errors.save(out / 'error-ocr.png')
     diagnostic = subprocess.run(['tesseract', str(out / 'error-ocr.png'), 'stdout', '--psm', '6'], capture_output=True, text=True, check=True).stdout.upper()
     (out / f'{label}-diagnostics.txt').write_text(diagnostic)
@@ -140,6 +153,8 @@ def screenshot(label):
     return normalized
 
 def contains(text, expected):
+    if any(character.isdigit() for character in expected):
+        return expected in text
     # The IBM bitmap font produces occasional OCR substitutions. Require >=85%
     # agreement within a short substring, never a whole-screen similarity score.
     for size in range(max(1, len(expected) - 2), len(expected) + 3):
@@ -149,10 +164,12 @@ def contains(text, expected):
     return False
 
 
-def wait_for(label, patterns, timeout=100, leave_orbit=False):
+def wait_for(label, patterns, timeout=100, skip_intro=False, require_timer=False):
     end = time.monotonic() + timeout
-    matched = False
-    next_back = time.monotonic() + 3
+    matched_at = None
+    clock_states = set()
+    next_skip = time.monotonic() + 2
+    settle = 3 if label in {"orbit", "return-orbit"} else 1
     while time.monotonic() < end:
         if proc.poll() is not None:
             raise AssertionError(f'Emulator exited before {label}: {proc.returncode}')
@@ -160,21 +177,36 @@ def wait_for(label, patterns, timeout=100, leave_orbit=False):
         if any(re.search(x, text) for x in ['SYNTAXERROR', 'ILLEGALFUNCTION', 'OUTOFMEMORY', 'OUTOFDATA', 'FILENOTFOUND', 'UNDEFINEDLINE']):
             raise AssertionError(f'BASIC error during {label}: {text}')
         if all(contains(text, pattern) for pattern in patterns):
-            if not matched:
-                matched = True
-                time.sleep(1)
+            if require_timer:
+                clock_states.add(timer_samples[label])
+                # OCR can take longer than the entire unpowered flight on a
+                # hosted runner. Sample the already-located timer directly.
+                sample_end = min(end, time.monotonic() + 3)
+                while len(clock_states) < 2 and time.monotonic() < sample_end:
+                    time.sleep(.15)
+                    clock = ImageGrab.grab(bbox=timer_bounds[label])
+                    clock_states.add(hashlib.sha256(monochrome(clock).tobytes()).hexdigest())
+                timer_metrics[label] = len(clock_states)
+                if len(clock_states) < 2:
+                    time.sleep(.5)
+                    continue
+            if require_timer:
+                # Two distinct timer states already establish a live, stable flight.
+                checks.append(label)
+                print(f'PASS {a.machine}/{a.cycles}: {label}', flush=True)
+                return
+            if matched_at is None:
+                matched_at = time.monotonic()
+            if time.monotonic() - matched_at < settle:
+                time.sleep(.5)
                 continue
             checks.append(label)
             print(f'PASS {a.machine}/{a.cycles}: {label}', flush=True)
             return
-        matched = False
-        if leave_orbit and time.monotonic() >= next_back:
-            # Orbit drains keys buffered while loading. Retry only when its
-            # header is still visible, never blindly send Escape at a menu.
-            header = screenshot('return-orbit')
-            if contains(header, 'SELECTLANDINGSITE'):
-                back()
-            next_back = time.monotonic() + 3
+        matched_at = None
+        if skip_intro and time.monotonic() >= next_skip:
+            key("space")
+            next_skip = time.monotonic() + 2
         time.sleep(1)
     raise AssertionError(f'Timed out waiting for {label}; see screenshot and OCR text')
 
@@ -187,9 +219,12 @@ try:
         time.sleep(.1)
     if window is None:
         raise AssertionError('No DOSBox window')
+    # This X server belongs to the test. Held keys must not autorepeat through
+    # successive game screens (Escape could otherwise exit three menus).
+    subprocess.run(['xset', 'r', 'off'], env=env, check=True)
     wait_for('title', ['GRAPHICSSCENEREADY'])
     key('space')
-    wait_for('menu', ['SELECTMISSION', 'MOONLANDING'])
+    wait_for('menu', ['SELECTMISSION', 'MOONLANDING'], skip_intro=True)
     if a.gameport:
         key('j')
         wait_for('setup-center', ['GAMEPORT', 'CENTER'])
@@ -197,9 +232,11 @@ try:
         key('Return')
         wait_for('setup-up-left', ['HOLDUPLEFT'])
         pad(-32767, -32767)
+        time.sleep(1)
         key('Return')
         wait_for('setup-down-right', ['HOLDDOWNRIGHT'])
         pad(32767, 32767)
+        time.sleep(1)
         key('Return')
         wait_for('setup-enabled', ['GAMEPADENABLED'])
         pad()
@@ -208,15 +245,15 @@ try:
     confirm()
     wait_for('orbit' , ['SELECTLANDINGSITE', 'DESCEND'])
     confirm()
-    wait_for('flight', ['ALT', 'LANDER', 'THR'])
+    wait_for('flight', ['ALT', 'LANDER', 'THR'], require_timer=True)
     # An unpowered descent must reach the crash/report path rather than hang.
     wait_for('crash', ['LANDERSLEFT', 'ENTER'], timeout=120)
     confirm()
-    wait_for('retry', ['ALT', 'LANDER', 'THR'])
+    wait_for('retry', ['ALT', 'LANDER2', 'THR'], require_timer=True)
     back()
     wait_for('return-orbit', ['SELECTLANDINGSITE'])
     back()
-    wait_for('return-menu', ['SELECTMISSION'], leave_orbit=True)
+    wait_for('return-menu', ['SELECTMISSION'])
     back()
     try:
         proc.wait(timeout=20)
@@ -238,4 +275,4 @@ finally:
             proc.kill()
             proc.wait()
     log.close()
-    (out / 'results.json').write_text(json.dumps({'machine': a.machine, 'cycles': a.cycles, 'gameport': a.gameport, 'success': success, 'failure': failure, 'passed': checks}, indent=2) + '\n')
+    (out / 'results.json').write_text(json.dumps({'machine': a.machine, 'cycles': a.cycles, 'gameport': a.gameport, 'timer_states': timer_metrics, 'runtime_sha256': hashlib.sha256((drives / 'start/GWBASIC.EXE').read_bytes()).hexdigest(), 'success': success, 'failure': failure, 'passed': checks}, indent=2) + '\n')

@@ -22,15 +22,27 @@ jobs:
           - profile: Laser-XT-CGA-proxy
             machine: cga
             cycles: 300
+            input: keyboard
           - profile: Tandy-1000-proxy
             machine: tandy
             cycles: 300
+            input: keyboard
           - profile: IBM-PCjr-proxy
             machine: pcjr
             cycles: 300
+            input: keyboard
           - profile: CGA-faster-CPU
             machine: cga
             cycles: 1200
+            input: keyboard
+          - profile: CGA-native-gameport
+            machine: cga
+            cycles: 1200
+            input: gameport
+          - profile: Tandy-native-gameport
+            machine: tandy
+            cycles: 1200
+            input: gameport
     steps:
       - uses: actions/checkout@v4
       - name: Build test environment
@@ -39,19 +51,22 @@ jobs:
         env:
           MACHINE: ${{ matrix.machine }}
           CYCLES: ${{ matrix.cycles }}
-        run: >-
-          docker run --init --rm -v "$PWD:/workspace" moon-ci bash -euc
-          'python3 tools/ci/prepare-runtime.py;
-          bash tools/mkdisk.sh;
-          python3 tools/ci/check-assembly.py;
-          xvfb-run -a -s "-screen 0 1024x768x24" python3 tools/ci/emulator-test.py
-          --machine '"$MACHINE"' --cycles '"$CYCLES"
+          INPUT_MODE: ${{ matrix.input }}
+        run: |
+          docker run --init --rm -e MACHINE -e CYCLES -e INPUT_MODE -v "$PWD:/workspace" moon-ci bash -euc '
+            python3 tools/ci/prepare-runtime.py
+            bash tools/mkdisk.sh
+            python3 tools/ci/check-assembly.py
+            args=(--machine "$MACHINE" --cycles "$CYCLES")
+            if [[ "$INPUT_MODE" == gameport ]]; then args+=(--gameport); fi
+            xvfb-run -a -s "-screen 0 1024x768x24" python3 tools/ci/emulator-test.py "${args[@]}"
+          '
       - name: Save screenshots, OCR, logs and result manifest
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: evidence-${{ matrix.profile }}-${{ matrix.cycles }}
           path: |
-            build/ci/${{ matrix.machine }}-${{ matrix.cycles }}/
+            build/ci/${{ matrix.machine }}-${{ matrix.cycles }}*/
           if-no-files-found: warn
           retention-days: 14
