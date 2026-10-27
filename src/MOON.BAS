@@ -143,7 +143,7 @@
 6596 PRINT "Hold A to burn? (Y/N)": PRINT " Y: engine runs only while A is held,": PRINT "    D-pad up/down sets the power": PRINT " N: each A press adds 10% power"
 6597 JA$ = INKEY$: IF JA$ <> "" THEN 6597
 6598 JA$ = INKEY$: IF JA$ = "" OR INSTR("YyNn", JA$) = 0 THEN 6598
-6599 JM% = -(JA$ = "Y" OR JA$ = "y"): IF JM% THEN PRINT "HOLD A TO BURN: ON" ELSE PRINT "HOLD A TO BURN: OFF"
+6599 JM% = -(JA$ = "Y" OR JA$ = "y"): IF JM% THEN PRINT "PAD MODE: HOLD A TO BURN" ELSE PRINT "PAD MODE: TAP A FOR THRUST"
 6600 PRINT "Release pad; ENTER to return.": GOSUB 6760: RETURN
 6720 PRINT: PRINT "No usable calibrated gameport found.": PRINT "Check port, pad mode and directions."
 6721 PRINT "CENTER "; JX%; JY%: PRINT "UP-LEFT "; JL%; JU%: PRINT "DOWN-RIGHT "; JR%; JW%

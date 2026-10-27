@@ -169,7 +169,7 @@ def contains(text, expected):
     return False
 
 
-def wait_for(label, patterns, timeout=100, skip_intro=False, require_timer=False):
+def wait_for(label, patterns, timeout=100, skip_intro=False, require_timer=False, nudge=None):
     end = time.monotonic() + timeout
     matched_at = None
     clock_states = set()
@@ -216,9 +216,10 @@ def wait_for(label, patterns, timeout=100, skip_intro=False, require_timer=False
             print(f'PASS {a.machine}/{a.cycles}: {label}', flush=True)
             return
         matched_at = None
-        if skip_intro and time.monotonic() >= next_skip:
-            key("space")
-            next_skip = time.monotonic() + 2
+        if (skip_intro or nudge) and time.monotonic() >= next_skip:
+            # Resend a key the screen is still waiting for (a press can land while DOSBox is busy).
+            key(nudge or "space")
+            next_skip = time.monotonic() + (3 if nudge else 2)
         time.sleep(1)
     # Terrain OCR is expensive and unnecessary for a matched HUD. Inspect the
     # BASIC error area on failure, without consuming the short flight window.
@@ -257,7 +258,7 @@ try:
         key('Return')
         wait_for('setup-enabled', ['GAMEPADENABLED', 'HOLDATOBURN'])
         key('n')                       # keep tap-to-throttle; hold mode is a player's choice
-        wait_for('setup-mode', ['HOLDATOBURNOFF'])
+        wait_for('setup-mode', ['TAPAFORTHRUST'], nudge='n')
         pad()
         key('Return')
         wait_for('setup-return', ['SELECTMISSION'])
