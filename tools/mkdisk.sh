@@ -39,7 +39,7 @@ for f in $(mdir -i "$START" -b ::/ | sed 's#^::/##'); do
 done
 mattrib -i "$START" +r +h +s ::/IO.SYS ::/MSDOS.SYS
 mcopy -o -i "$START" "$R/dos/GWBASIC.EXE" "$R/build/tok/MOON.BAS" "$R/assets/MOONBG.PIC" \
-      "$R/assets/EARTH.SPR" "$R/assets/TITLE.SPR" "$T/GO.BAT" "$T/AUTOEXEC.BAT" $EXTRA ::/
+      "$R/assets/EARTH.SPR" "$R/assets/TITLE.SPR" "$R/assets/CREDIT.SPR" "$T/GO.BAT" "$T/AUTOEXEC.BAT" $EXTRA ::/
 mlabel -i "$START" ::MOONSTART
 echo "START:   $(mdir -i "$START" ::/ | grep free | xargs)"
 

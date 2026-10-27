@@ -6,7 +6,7 @@ the Earthrise photo's Earth disc, enlarged.
 usage: mkart.py EARTH_PHOTO OUTDIR
 Outputs: MOONBG.PIC (BSAVE of video RAM), EARTH.SPR, TITLE.SPR, layout.txt, preview_*.png
 """
-import sys, struct, random, math
+import sys, os, struct, random, math
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
@@ -134,21 +134,26 @@ tp[sh & (tp != 3)] = 2
 tp[(tp == 3) & (np.arange(tp.shape[0])[:, None] < tp.shape[0] * 0.38)] = 1
 TW = tp.shape[1] + (-tp.shape[1]) % 4
 tpad = np.zeros((tp.shape[0], TW), np.uint8); tpad[:, :tp.shape[1]] = tp
-# the designer's credit above the title, Sid Meier style
-nf = ImageFont.truetype("/usr/share/fonts/truetype/google-fonts/Poppins-BoldItalic.ttf", 12)
-nimg = Image.new("L", (400, 24), 0); nd = ImageDraw.Draw(nimg); cx = 2
-for c in "RYAN BARRINEAU'S":
-    if c == " ": cx += 4; continue
-    b = nf.getbbox(c); nd.text((cx - b[0], 0), c, font=nf, fill=255); cx += b[2] - b[0] + 1
-na = np.asarray(nimg) > 110
-ys_, xs_ = np.nonzero(na); na = na[ys_.min():ys_.max() + 1, xs_.min():xs_.max() + 1]
-na = np.asarray(Image.fromarray(na.astype(np.uint8) * 255).resize((na.shape[1], int(round(na.shape[0] / 1.2))), Image.LANCZOS)) > 110
-both = np.zeros((na.shape[0] + 2 + tpad.shape[0], TW), np.uint8)
-nx = (TW - na.shape[1]) // 2
-both[0:na.shape[0], nx:nx + na.shape[1]][na] = 3
-both[na.shape[0] + 2:] = tpad
-tpad = both
-TX, TY = (320 - TW) // 2 // 4 * 4, 2
+# the designer's credit under the title, on the right, the way Alley Cat signs "By Bill Williams"
+nf = ImageFont.truetype(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "fonts", "dancing-script-latin-700-normal.woff"), 20)
+def script(txt):
+    im = Image.new("L", (300, 40), 0); ImageDraw.Draw(im).text((2, 2), txt, font=nf, fill=255)
+    a = np.asarray(im)
+    a = np.asarray(Image.fromarray(a).resize((300, int(round(40 / 1.2))), Image.LANCZOS)) > 70
+    ys_, xs_ = np.nonzero(a)
+    return a[:, xs_.min():xs_.max() + 1], ys_.min(), ys_.max()
+by, b0, b1 = script("by"); nm, n0, n1 = script("Ryan Barrineau")
+top = min(b0, n0)
+CW = nm.shape[1] + 2 + (-(nm.shape[1] + 2)) % 4
+GAP = b1 - top + 2                                  # the y's tail just clears the R
+cred = np.zeros((n1 - top + 1 + GAP + 1, CW), np.uint8)
+cred[0:b1 - top + 1, 4:4 + by.shape[1]][by[top:b1 + 1]] = 3
+cred[GAP:GAP + n1 - top + 1, 2:2 + nm.shape[1]][nm[top:n1 + 1]] = 3
+sh = np.zeros_like(cred, bool); sh[1:, 1:] = cred[:-1, :-1] == 3
+cred[sh & (cred != 3)] = 2                          # red drop shadow, like the title
+ys_ = np.nonzero(cred.any(1))[0]; cred = cred[ys_.min():ys_.max() + 1]
+CX, CY = 316 - CW, 34
+TX, TY = (320 - TW) // 2 // 4 * 4, 6
 
 # ---------------- writers ----------------
 def cga_bytes(px):
@@ -181,9 +186,10 @@ esp = np.zeros((SH, EW), np.uint8); esp[:EH] = earth
 bsave(f"{OUT}/MOONBG.PIC", cga_bytes(bg))
 bsave(f"{OUT}/EARTH.SPR", sprite(esp), seg=0)
 bsave(f"{OUT}/TITLE.SPR", sprite(tpad), seg=0)
+bsave(f"{OUT}/CREDIT.SPR", sprite(cred), seg=0)
 
 lay = (f"EX={EX} EY={EY} HT={HT} EW={EW} EH={EH} SH={SH} RISE={HT - EY} "
-       f"EARTH_INTS={len(sprite(esp)) // 2} TITLE_INTS={len(sprite(tpad)) // 2} TX={TX} TY={TY} {stats}")
+       f"EARTH_INTS={len(sprite(esp)) // 2} TITLE_INTS={len(sprite(tpad)) // 2} TX={TX} TY={TY} CREDIT_INTS={len(sprite(cred)) // 2} CX={CX} CY={CY} CW={CW} {stats}")
 open(f"{OUT}/layout.txt", "w").write(lay + "\n")
 print(lay)
 
@@ -192,6 +198,7 @@ def png(px, path, scale=3):
 
 fin = full.copy()
 fin[TY:TY + tpad.shape[0], TX:TX + TW][tpad > 0] = tpad[tpad > 0]
+fin[CY:CY + cred.shape[0], CX:CX + CW][cred > 0] = cred[cred > 0]
 png(bg, f"{OUT}/preview_start.png")
 png(fin, f"{OUT}/preview_title.png")
 png(earth, f"{OUT}/preview_earth_zoom.png", 5)
