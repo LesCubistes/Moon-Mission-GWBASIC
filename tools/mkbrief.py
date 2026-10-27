@@ -130,8 +130,8 @@ text(p, 136, 118, "LANDER 1/3"); text(p, 252, 118, "T 0:08")
 text(p, 8, 127, "ALT  120 H +1.5 V -3.2 THR  60")
 y = 141
 for k, what in (("{1}ALT{3}", "height above the ground"),
-                ("{1}H{3}", "sideways speed: + right, - left"),
-                ("{1}V{3}", "up/down speed: - means falling"),
+                ("{1}H{3}", "drift: +1.5 means moving right"),
+                ("{1}V{3}", "fall: -3.2 means moving down"),
                 ("{1}THR{3}", "engine power, in percent"),
                 ("{1}FUEL{3}", "the bar at the top left")):
     text(p, 16, y, k); text(p, 64, y, what); y += 9
